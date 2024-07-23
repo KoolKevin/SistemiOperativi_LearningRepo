@@ -1,0 +1,18 @@
+CHE COS'È UN SISTEMA OPERATIVO(SO)?
+È un programma (o un insieme di programmi) che agisce come intermediario tra l’utente e l’hardware del computer:
+    • fornisce una visione astratta e semplificata dell’HW
+    • gestisce in modo efficace ed efficiente le risorse del sistema di calcolo
+    • mette a disposizione un ambiente di esecuzione e di sviluppo per i programmi degli utenti
+
+Rimanendo sempre ad alto livello:
+    • Il SO interfaccia i programmi che l'utente esegue con le risorse HW:
+        - CPU
+        - memoria centrale (RAM)
+        - memoria secondaria (es. Dischi)
+        - dispositivi di I/O
+        - connessioni di rete
+    • Il SO mappa le risorse HW in risorse logiche, accessibili attraverso interfacce ben definite:
+        - CPU -> Processi
+        - Memoria secondaria -> file system
+        - Memoria centrale -> memoria virtuale
+

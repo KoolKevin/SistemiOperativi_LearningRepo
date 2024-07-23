@@ -1,0 +1,80 @@
+--- PRIMA GENERAZIONE(anni ‘50)
+    • Architettura basata su valvole termoioniche
+    • linguaggio macchina
+    • controllo del sistema manuale/meccanico
+    • non è presente il sistema operativo
+
+--- SECONDA GENERAZIONE(‘55-’65): SISTEMI BATCH SEMPLICI
+    • Architettura basata su transistor
+    • linguaggio di alto livello (fortran)
+    • input mediante schede perforate
+    • aggregazione di programmi in lotti (batch) con esigenze simili
+        - Batch: insieme di programmi (job) da eseguire in modo SEQUENZIALE.
+
+-> Compito del SO: trasferimento di controllo da un job (appena terminato) al prossimo da eseguire.
+Caratteristiche dei sistemi batch semplici:
+    • S.O. residente in memoria
+    • assenza di interazione tra utente e job,
+        - Una volta sottomesso, il bacth,veniva eseguito in sequenza senza aspettarsi ulteriori istruzioni o input da parte dell'utente.
+        - Gli output generati dai job venivano raccolti e consegnati all'utente solo al termine dell'intero batch.
+    • scarsa efficienza: durante l’I/O del job corrente, la CPU rimane inattiva! (sequenzialità delle operazioni)
+        - In memoria centrale, ad ogni istante, è caricato (al più) un solo job.
+
+--- SISTEMI BATCH MULTIPROGRAMMATI
+In sistemi batch semplici: l’attesa di un evento causa inattività della CPU. Per evitare il problema:
+    -> Multiprogrammazione!
+        • Viene precaricato sul disco un insieme (pool) di job
+        • Il SO SELEZIONA UN SOTTOINSIEME DEI JOB appartenenti al pool, che vengono caricati in memoria centrale
+        • Tra i job in memoria, il SO NE SCEGLIE UNO (job corrente) a cui assegnare la CPU
+        • Se il job corrente si pone in attesa di un evento, il sistema operativo assegna la CPU a un altro job
+
+Il SO è in grado di portare avanti l’esecuzione di più job contemporaneamente!
+Ad ogni istante:
+    • un solo job utilizza la CPU
+    • più job, appartenenti al pool selezionato e caricati in memoria centrale, attendono di acquisire la CPU
+Quando il job che sta utilizzando la CPU si sospende in attesa di un evento:
+    • SO decide a quale job assegnare la CPU (scheduling) ed effettua lo scambio (cambio di contesto o context switch)
+
+CAMBIO DI CONTESTO
+È l’operazione con cui l’uso della CPU passa da un job J1 ad un Job J2.
+Quando avviene un cambio di contesto è necessario:
+    • salvare in memoria le informazioni (contenute nei registri di CPU) relative allo stato di esecuzione di J1.
+    • caricare nei registri di CPU le informazioni (precedentemente salvate in memoria) relative allo stato di J2, in modo che possa riprendere
+      l’esecuzione dal punto in cui era stata interrotta.
+
+SISTEMI BATCH MULTIPROGRAMMATI: SCHEDULING
+SO effettua delle scelte tra tutti i job:
+    • quali job caricare in memoria centrale: scheduling dei job (long-term scheduling)
+    • a quale job assegnare la CPU: scheduling della CPU o (short-term scheduling)
+
+NB: in sistemi batch multiprogrammati, in memoria centrale, ad ogni istante, possono essere caricati più job -> Necessità di protezione
+
+--- SISTEMI TIME-SHARING (Multics, 1965)
+Nascono dalla necessità di:
+    • interattività con l’utente
+    • multi-utenza: più utenti interagiscono contemporaneamente con SO
+MULTIUTENZA: il sistema operativo presenta ad ogni utente una macchina “virtuale” completamente dedicata in termini di:
+    • utilizzo della CPU
+    • utilizzo di altre risorse, ad es. file system
+INTERATTIVITÀ: per garantire un’accettabile velocità di “reazione” alle richieste dei singoli utenti, il S.O. interrompe l’esecuzione di ogni job
+               dopo un intervallo di tempo prefissato delta_t (quanto di tempo, o time slice) assegnando la CPU a un altro job.
+
+Sono sistemi in cui:
+    • attività della CPU è dedicata a job diversi che si alternano ciclicamente nell’uso della risorsa
+    • frequenza di commutazione della CPU è tale da fornire l’illusione ai vari utenti di una macchina completamente dedicata (macchina virtuale)
+MOLTI Cambi di contesto (context switch): operazione di trasferimento del controllo della CPU da un job al successivo
+    -> costo aggiuntivo (overhead)
+
+TIME-SHARING, REQUISITI:
+    • Gestione/protezione della memoria:
+        - separazione degli spazi assegnati ai diversi job in modo che un job non sovrascriva i dati di un altro
+        - limitatezza della memoria, può non bastare per molti job, in questo caso
+            -> memoria virtuale
+            -> trasferimenti memoria-disco
+    • Scheduling CPU
+    • Sincronizzazione/comunicazione tra job:
+        - interazione
+        - prevenzione/trattamento di blocchi critici (deadlock)
+    • Interattività: accesso on-line al file system per permettere agli utenti di accedere semplicemente a codice e dati
+
+Conclusione: timesharing != multiprogrammazione 
