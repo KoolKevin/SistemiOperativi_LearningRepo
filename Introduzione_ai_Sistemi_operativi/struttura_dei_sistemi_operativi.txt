@@ -1,0 +1,69 @@
+Come sono organizzate le varie componenti all’interno del sistema operativo?
+Varie soluzioni:
+    • struttura Monolitica
+    • struttura Modulare
+    • Microkernel
+    • Macchine virtuali
+
+STRUTTURA MONOLITICA
+Il sistema operativo è costituito da un unico modulo eseguibile contenente un insieme di procedure, che realizzano le varie componenti. 
+    -> l’interazione tra le diverse componenti avviene mediante il meccanismo di chiamata a procedura.
+Esempi: MS-DOS,UNIX, GNU/Linux
+
+Principale Vantaggio: 
+    basso costo di interazione tra le componenti.
+Svantaggi:
+    Il SO è un sistema complesso e presenta gli stessi requisiti delle applicazioni in-the-large:
+        • estendibilità
+        • manutenibilità
+        • riutilizzo
+        • portabilità
+        • affidabilità
+    un’impostazione monolitica non è ideale per garantire queste proprietà.
+
+-> Soluzione: organizzazione modulare
+
+STRUTTURA MODULARE
+Le varie componenti del SO vengono organizzate in moduli caratterizzati da interfacce ben definite.
+Esempio: Sistemi Stratificati (a livelli) (THE, Dijkstra1968)
+
+il sistema operativo è costituito da livelli sovrapposti, ognuno dei quali realizza un insieme di funzionalità:
+    • ogni livello realizza un’insieme di funzionalità che vengono offerte al livello superiore mediante un’interfaccia
+    • ogni livello utilizza le funzionalità offerte dal livello sottostante, per realizzare altre funzionalità
+
+Vantaggi:
+    • Astrazione: ogni livello è un oggetto astratto, che fornisce ai livelli superiori una visione astratta del sistema (Macchina Virtuale),
+                limitata alle astrazioni presentate nell’interfaccia.
+    • Modularità: le relazioni tra i livelli sono chiaramente esplicitate dalle interfacce. 
+                Possibilità di sviluppo, verifica, modifica in modo indipendente dagli altri livelli
+Svantaggi:
+    • Organizzazione gerarchica tra le componenti: non sempre è possibile -> difficoltà di realizzazione.
+    • Scarsa efficienza: costo di attraversamento dei livelli
+
+-> Soluzione: limitare il numero dei livelli.
+
+DEF: KERNEL
+Nucleo del Sistema Operativo (kernel) -> E` la parte del sistema operativo che esegue in modo kernel
+    • È la parte più interna del sistema operativo, che si interfaccia direttamente con l’hardware della macchina.
+    • Le funzioni realizzate all’interno del nucleo variano a seconda del Sistema Operativo
+Tipicamente, tra le funzioni del nucleo ci sono:
+    • Creazione/terminazione dei processi
+    • scheduling della Cpu
+    • gestire il cambio di contesti
+    • Sincronizzazione/Comunicazione tra processi
+    • Gestione della memoria
+    • Gestione dell’I/O
+    • Gestione delle interruzioni
+    • implementazione system call.
+
+SISTEMI OPERATIVI A MICROKERNEL
+La struttura del nucleo è ridotta a poche funzionalità di base. Il resto del SO è rappresentato da processi di utente 
+Caratteristiche:
+    • affidabilità (separazione tra componenti)
+    • possibilità di estensioni e personalizzazioni
+    • scarsa efficienza (molte chiamate a system call)
+ESEMPI: Minix, L4, Mach, Hurd, BeOS/Haiku
+
+KERNEL IBRIDI
+microkernel che integrano a livello kernel funzionalità non essenziali.
+Esempi: Microsoft Windows; XNU, il kernel di Mac OS X

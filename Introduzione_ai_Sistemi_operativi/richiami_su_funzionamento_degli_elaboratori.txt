@@ -1,0 +1,84 @@
+---INTERRUPT
+Le varie componenti HW e SW del sistema interagiscono con SO mediante interruzioni asincrone (interrupt).
+Ogni interruzione è causata da un evento, ad es:
+    • completamento di I/O
+    • accesso non consentito alla memoria
+    • richiesta di servizi al SO (system call)
+Ad ogni interruzione è associata una routine di servizio (handler) per la gestione dell’evento.
+
+Distinguiamo tra:
+    • Interruzioni hardware: dispositivi inviano segnali a CPU per notificare particolari eventi al SO (es. completamento di un’operazione)
+    • Interruzioni software (trap): programmi in esecuzione possono generare interruzioni SW
+        - quando tentano l’esecuzione di operazioni non lecite (ad es. divisione per 0)
+        - quando richiedono l’esecuzione di servizi al SO - system call
+
+Alla ricezione di un’interruzione, il SO :
+    1. interrompe l'esecuzione del processo corrente => salvataggio dello stato in memoria
+    2. attiva la routine di servizio all’interruzione (handler)
+    3. ripristina lo stato salvato
+
+---INPUT/OUTPUT
+Come avviene l’I/O in un sistema di elaborazione?
+    -> mediante Controller: interfaccia HW delle periferiche verso il bus di sistema;
+
+Ogni controller è dotato di:
+    • un registro dati (ove memorizzare temporaneamente le informazioni da leggere o scrivere)
+    • alcuni registri speciali , ove memorizzare le specifiche delle operazioni di I/O da eseguire (reg. controllo)
+      e l’esito delle operazioni eseguite (reg. stato).
+
+Quando un job richiede un’operazione di I/O (ad esempio, lettura da un dispositivo):
+    • CPU (o meglio DRIVER) scrive nei registri speciali del dispositivo coinvolto le specifiche dell’operazione da eseguire
+    • il controller esamina i registri e provvede a trasferire i dati richiesti dal dispositivo al registro dati
+    • invio di interrupt alla CPU (completamento del trasferimento)
+    • CPU esegue l’operazione di I/O tramite la routine di servizio (trasferimento dal registro dati del controller alla memoria centrale)
+DRIVER DI DISPOSITIVO: componente del SO che interagisce direttamente con il dispositivo:
+    • copia nei registri del controller le informazioni relative all’operazione da effettuare
+    • è l’unica componente del s.o. device-dependent (la sua struttura è strettamente dipendente dal particolare dispositivo controllato)
+
+---PROTEZIONE HW DELLE RISORSE
+Nei sistemi che prevedono multiprogrammazione e multiutenza sono necessari alcuni meccanismi HW (e non solo…) per esercitare protezione.
+Le risorse allocate a programmi/utenti devono essere protette nei confronti di accessi illeciti di altri programmi/utenti:
+    • memoria
+    • CPU
+    • dispositivi di I/O
+Ad esempio: accesso a locazioni esterne allo spazio di indirizzamento del programma
+
+In un sistema multiprogrammato o time sharing, ogni job ha un suo spazio di indirizzi, è necessario quindi impedire al programma in esecuzione di accedere ad aree di memoria
+esterne al proprio spazio (ad esempio del SO oppure di altri job)
+    -> Se fosse consentito: un programma potrebbe modificare codice e dati di altri programmi o, ancor peggio, del SO
+
+Per garantire protezione, molte architetture di CPU prevedono più modi di funzionamento (ring di protezione).
+Ad esempio, 2 modi (dual mode architecture):
+    • user mode 
+    • kernel mode
+Realizzazione: l’architettura hardware della CPU prevede almeno un bit di modo (kernel: 0, user: 1)
+
+ISTRUZIONI PRIVILEGIATE: istruzioni che possono essere eseguite soltanto se il sistema si trova in kernel mode. Sono le istruzioni più critiche e potenzialmente «pericolose».
+Ad esempio:
+    • accesso a dispositivi di I/O (dischi,schede di rete, ...)
+    • gestione della memoria (accesso a strutture dati di sistema per controllo e accesso alla memoria, …)
+    • disabilitazione interruzioni
+    • istruzione di shutdown (arresto del sistema)
+
+Il S.O. esegue in modo kernel, Ogni programma utente esegue in user mode.
+Quando un programma utente tenta l’esecuzione di una istruzione privilegiata, l’hardware lo impedisce (può essere generato un trap)
+    -> se il programma necessita di operazioni privilegiate -> chiamata a system call
+
+SYSTEM CALL
+Per ottenere l’esecuzione di istruzioni privilegiate, un programma utente deve chiamare una system call.
+La chiamata di system call provoca i seguenti effetti:
+    1. invio di un’interruzione software al S.O.
+    2. salvataggio dello stato (PC, registri, bit di modo, ...) del programma chiamante e trasferimento del controllo al SO
+    3. il SO esegue in modo kernel l’operazione richiesta tramite una specifica routine di gestione
+    4. al termine dell’operazione, il controllo ritorna al programma chiamante (ritorno al modo user): ripristino dello stato del programma chiamante
+
+PROTEZIONE DELLA MEMORIA
+ES: Architettura Intel IA32: 2 bit di protezione -> 4 modi o ring.
+I 2 bit meno significativi del registro CS rappresentano il livello (ring) di privilegio corrente (Current Privilege Level, CPL), ovvero 
+il livello di privilegio del programma in esecuzione:
+    - Ring 0 dotato dei maggiori privilegi e quindi destinato al kernel del sistema operativo -> modo kernel
+    …
+    - Ring 3, quello dotato dei minori privilegi e quindi destinato alle applicazioni utente -> modo user
+
+Ad ogni area di memoria (segmento) viene assegnato un livello di privilegio (richiesto per l’accesso): PL
+-> Se CPL>PL -> violazione!
