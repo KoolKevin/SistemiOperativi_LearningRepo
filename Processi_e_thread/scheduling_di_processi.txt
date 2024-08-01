@@ -1,0 +1,65 @@
+---SCHEDULING DEI PROCESSI
+È l’attività mediante la quale il SO effettua delle scelte tra i processi, riguardo a:
+    • caricamento in memoria centrale
+    • assegnazione della CPU
+In generale, il SO compie tre diverse attività di scheduling:
+    • scheduling a breve termine (o di CPU)
+    • scheduling a medio termine (o swapping)
+    • [scheduling a lungo termine]
+
+SCHEDULER A LUNGO TERMINE
+Lo scheduler a lungo termine è quella componente del SO che seleziona i programmi da eseguire dalla memoria secondaria per caricarli in memoria centrale
+(creando i corrispondenti processi).
+    • controlla il grado di multiprogrammazione (numero di processi contemporaneamente presenti nel sistema)
+    • è una componente importante dei sistemi batch multiprogrammati
+    • nei sistemi time sharing non è presente in quanto: 
+        => Interattività: di solito è l’utente che stabilisce direttamente quali/quanti processi caricare => scheduler a lungo termine non è presente
+
+SCHEDULER A MEDIO TERMINE (SWAPPER)
+Nei sistemi operativi multiprogrammati:
+    • la quantità di memoria fisica può essere minore della somma delle dimensioni delle aree di memoria da allocare a ciascun processo
+    • il grado di multiprogrammazione non è, in generale, vincolato dalle esigenze di spazio dei processi
+Per cui:
+    -> Swapping: trasferimento temporaneo in memoria secondaria di processi (o di parti di processi), in modo da consentire il caricamento di altri processi
+
+quali processi scegliere per lo swapping è compito dello scheduler a medio termine.
+
+SCHEDULER A BREVE TERMINE (o di CPU)
+È quella parte del SO che si occupa della selezione dei processi a cui assegnare la CPU.
+Nei sistemi multiprogrammati, ogni volta che il processo corrente lascia la CPU (attesa di un evento o, in sistemi time sharing, allo scadere del quanto di tempo)
+il SO:
+    • decide a quale processo assegnare la CPU (scheduling di CPU)
+    • effettua il cambio di contesto (context switch)
+
+CAMBIO DI CONTESTO
+È la fase in cui l’uso della CPU viene commutato da un processo ad un altro.
+Quando avviene un cambio di contesto tra un processo Pi ad un processo Pi+1 (ovvero, Pi cede l’uso della CPU a Pi+1):
+    • Salvataggio dello stato di Pi: SO copia PC, registri, ... del processo deschedulato Pi nel suo PCB
+    • Ripristino dello stato di Pi+1: SO trasferisce i dati del processo Pi+1 dal suo PCB nei registri di CPU, che può così riprendere l’esecuzione
+Il cambio di contesto viene scatenato da INTERRUPT(timer, finito il quanto di tempo; I/O interrupt; ...) o SYSTEM CALL (passo da user mode a kernel mode).
+
+NB: Il passaggio da un processo al successivo può richiedere onerosi trasferimenti da/verso la memoria secondaria, per allocare/deallocare gli spazi di indirizzi dei processi
+(vedi gestione della memoria).
+
+SCHEDULING GENERALITÀ
+Lo scheduler a breve termine gestisce la coda dei processi pronti: contiene i PCB dei processi che si trovano in stato Ready.
+Altre strutture dati necessarie sono le code di waiting (una per ogni tipo di attesa: dispositivi I/O, timer, ...). Ognuna di esse contiene i PCB dei processi waiting
+in attesa di un evento del tipo associato alla coda.
+
+• Scheduler short-term viene invocato con alta frequenza (ms) -> deve essere molto efficiente
+• Scheduler medium-term viene invocato a minore frequenza (sec-min) -> può essere anche più lento
+
+Scelte ottimali di scheduling dipendono dalle caratteristiche dei processi. Ad es.:
+    • processi I/O-bound – maggior parte del tempo in operazioni I/O
+    • processi CPU-bound – maggior parte del tempo in uso CPU
+
+Operazioni di scheduling determinano un costo computazionale aggiuntivo (overhead) che dipende essenzialmente da:
+    • frequenza di cambio di contesto
+    • dimensione PCB
+    • costo dei trasferimenti da/verso la memoria
+
+esistono SO che prevedono processi leggeri (thread) che hanno la proprietà di condividere codice e dati con altri processi:
+    -> dimensione PCB ridotta -> riduzione overhead
+
+
+

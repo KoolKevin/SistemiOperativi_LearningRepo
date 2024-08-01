@@ -1,0 +1,76 @@
+Il processo è un programma in esecuzione!
+    • È l’unità di esecuzione all’interno del SO
+    • Solitamente, esecuzione SEQUENZIALE, istruzioni vengono eseguite in sequenza, secondo l’ordine specificato nel testo del programma.
+    • un SO multiprogrammato consente l’esecuzione CONCORRENTE di più processi
+
+--- PROCESSI:
+    ->  Programma = entità passiva
+    ->  Processo = entità attiva
+
+Il processo è rappresentato da:
+    • codice (text) del programma eseguito
+    • dati:  da quello che ho capito, variabili globali e variabili allocate dinamicamente (heap). -> guarda thread.txt per più dettagli...
+    • program counter
+    • altri registri di CPU
+    • stack: parametri, variabili locali a funzioni/procedure (ogni elemento è un record di attivazione)
+
+Inoltre, a un processo possono essere associate delle risorse. Ad esempio:
+    • file aperti
+    • connessioni di rete utilizzate
+    • altri dispositivi di I/O in uso
+
+-> Processo = {PC, registri, stack, text, dati, risorse}
+
+//////////////////// CHAT-GPT ////////////////////
+
+Nel contesto dei sistemi operativi, quando si parla di "DATI" di un processo, ci si riferisce generalmente a diverse componenti della memoria del processo, non solo alle
+variabili globali.
+
+La memoria di un processo è tipicamente suddivisa in diverse sezioni, ognuna delle quali ha uno scopo specifico:
+    Segmenti:
+    - Text Segment (Codice):
+        Contiene il codice eseguibile del programma. Questa sezione è di sola lettura e contiene le istruzioni del programma.
+    - Data Segment:
+        - Static Data Segment: Contiene le variabili globali e statiche inizializzate.
+        - BSS (Block Started by Symbol): Contiene le variabili globali e statiche non inizializzate (il valore predefinito è zero).
+    - Heap: Area della memoria utilizzata per l'allocazione dinamica di memoria. 
+    - Stack: Contiene i parametri delle funzioni, le variabili locali e gli indirizzi di ritorno.
+
+    Registri:
+    - Program Counter (PC): Registra l'indirizzo della prossima istruzione da eseguire.
+    - Altri Registri CPU
+
+//////////////////////////////////////////////////
+
+--- STATI DI UN PROCESSO
+Un processo, durante la sua esistenza può trovarsi in vari stati:
+    • Init: stato transitorio durante il quale il processo viene caricato in memoria e SO inizializza i dati che lo rappresentano
+    • Ready: processo è pronto per acquisire la CPU
+    • Running: processo sta utilizzando la CPU
+    • Waiting: processo è sospeso in attesa di un evento
+    • Terminated: stato transitorio relativo alla fase di terminazione e deallocazione del processo dalla memoria
+
+
+In un sistema monoprocessore e multiprogrammato:
+    • un solo processo (al massimo) si trova nello stato running
+    • più processi possono trovarsi contemporaneamente negli stati ready e waiting
+
+Necessità di strutture dati per mantenere in memoria le informazioni su processi in attesa:
+    • di acquisire la CPU (ready)
+    • di eventi (waiting)
+
+    -> Descrittore di processo (o Process Control Block, PCB)
+
+--- DESCRITTORE DI PROCESSO (o Process Control Block, PCB)
+Come vengono rappresentati i processi nel S.O.?
+    • Ad ogni processo viene associata una struttura dati (descrittore): Process Control Block (PCB)
+    • il PCB contiene tutte le informazioni relative al processo:
+        - Stato del processo: ready, running, waiting, ecc.
+        - Contenuto dei registri di CPU (PC, SP, IR, accumulatori, ...)
+        - Informazioni di scheduling (priorità, puntatori alle code, ...)
+        - Informazioni per gestore di memoria (registri base, limite, ...)
+        - Informazioni relative all’I/O (risorse allocate, file aperti, ...)
+        - Informazioni di accounting (tempo di CPU utilizzato, ...)
+        - ...
+
+    -> Il sistema operativo gestisce i PCB di tutti i processi, organizzandoli in opportune strutture dati (ad esempio code) a seconda del loro stato

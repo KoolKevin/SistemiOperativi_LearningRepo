@@ -1,0 +1,85 @@
+Un thread (o processo leggero) è un’unità di esecuzione che condivide codice E DATI (e heap a quanto pare) con altri thread ad esso associati.
+    -> cosa sono i dati?
+
+Task = insieme di thread che riferiscono lo stesso codice (text) e gli stessi dati.
+- codice, dati e risorse non sono caratteristiche del singolo thread, ma del task al quale appartengono
+- ogni thread è caratterizzato da un PC, registri e stack privati 
+    Thread = {PC, registri, stack, ...}
+    Task = {thread1, thread2, ..., threadN, text, dati, risorse}
+
+Processo pesante equivale a un task con un solo thread (single-threaded process)
+
+//////////////////// STACK-OVERFLOW ////////////////////
+
+DOMANDA:
+    "Q. Do you know the segments in which a program gets divided?
+    My answer: yep Stack, Data, Code, Heap
+    Q. So, tell me: which segments do threads share?
+    I could not answer this and ended up in saying all of them.
+    Please, can anybody present the correct and impressive answers for the difference between a process and a thread?"
+
+A1 (semplice):
+You're pretty much correct, but threads share all segments EXCEPT THE STACK. Threads have independent call stacks.
+However the memory in other thread stacks is still accessible and in theory you could hold a pointer to memory in some other thread's local stack frame
+(though you probably should find a better place to put that memory!).
+
+A2 (più in dettaglio): 
+Something that really needs to be pointed out is that there are really two aspects to this question - the theoretical aspect and the implementations aspect.
+
+First, let's look at the theoretical aspect.
+You need to understand what a process is conceptually to understand the difference between a process and a thread and what's shared between them.
+We have the following from section 2.2.2 The Classical Thread Model in Modern Operating Systems 3e by Tanenbaum:
+
+    "The process model is based on two independent concepts: resource grouping and execution. Sometimes it is use­ful to separate them; this is where threads come in..."
+
+He continues:
+
+    "One way of looking at a process is that it is a way to group related resources together.
+     A process has an address space containing program text and data, as well as other resources. These resource may include open files, child processes, pending alarms,
+     signal handlers, accounting information, and more. By putting them together in the form of a process, they can be managed more easily.
+     The other concept a process has is a thread of execution, usually shortened to just thread.
+     The thread has a program counter that keeps track of which instruc­tion to execute next. It has registers, which hold its current working variables.
+     It has a stack, which contains the execution history, with one frame for each proce­dure called but not yet returned from.
+     Although a thread must execute in some process, the thread and its process are different concepts and can be treated sepa­rately.
+     
+     -> Processes are used to group resources together; threads are the entities scheduled for execution on the CPU."
+
+Further down he provides the following table:
+
+    Per process items             | Per thread items
+    ------------------------------|-----------------
+    Address space                 | Program counter
+    Global variables              | Registers
+    Open files                    | Stack
+    Child processes               | State
+    Pending alarms                |
+    Signals and signal handlers   |
+    Accounting information        |
+
+The above is what you need for threads to work.
+As others have pointed out, things like segments are OS dependant implementation details.
+
+/////////////////////////////////////////////////////////
+
+
+--- VANTAGGI/SVANTAGGI DEI THREAD
+    • Condivisione di memoria: a differenza dei processi (pesanti), un thread può condividere variabili con altri thread (appartenenti allo stesso task)
+    • Minor costo di context switch: PCB di thread non contiene alcuna informazione relativa a codice e dati globali:
+        -> il cambio di contesto fra thread dello stesso task ha un costo notevolmente inferiore al caso dei processi “pesanti”.
+    Svantaggio:
+    • Minor protezione: thread appartenenti allo stesso task possono modificare dati gestiti da altri thread 
+        -> corse critiche
+
+REALIZZAZIONE DEI THREAD
+Molti SO offrono l’implementazione del concetto di thread (es. WinXP e successivi, Linux, Solaris, MacOSX,….)
+
+Realizzazione:
+    • A livello kernel (WinXP, LINUX, Solaris, MacOSX, versioni recenti java):
+        - SO gestisce direttamente i cambi di contesto
+            - tra thread dello stesso task (trasferimento di registri)
+            - tra task
+        - SO fornisce strumenti per la sincronizzazione per l’accesso da parte dei thread a variabili comuni
+    • A livello utente (es. Andrew - Carnegie Mellon, POSIX pthread, vecchie versioni MSWin, JAVA THREAD):
+        - il passaggio da un thread al successivo (nello stesso task) non richiede interruzioni al SO (maggior rapidità)
+        - SO vede processi pesanti: la sospensione di un thread causa la sospensione di tutti i thread del task
+    • Soluzioni miste (es. Solaris):  thread realizzati a entrambi i livelli

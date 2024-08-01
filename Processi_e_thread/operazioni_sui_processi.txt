@@ -1,0 +1,134 @@
+Ogni SO multiprogrammato prevede dei meccanismi per la gestione dei processi.
+Meccanismi necessari:
+    • creazione
+    • terminazione
+    • interazione tra processi
+Sono operazioni privilegiate (esecuzione in modo kernel)
+    -> definizione di system call
+
+---CREAZIONE DI PROCESSI
+Un processo (padre) può richiedere la creazione di un nuovo processo (figlio)
+    -> È possibile realizzare gerarchie di processi
+
+Aspetti caratteristici:
+• concorrenza
+    - padre e figlio procedono in parallelo (es. UNIX), oppure
+    - il padre genera uno o più figli concorrenti e attende la loro terminazione
+    - …
+• condivisione di risorse
+    - le risorse del padre (ad esempio, i file aperti) sono condivise con i figli (es. UNIX), oppure
+    - il figlio utilizza risorse soltanto se esplicitamente richieste da se stesso
+    - …
+• spazio degli indirizzi
+    - duplicato (NON condiviso): lo spazio degli indirizzi del figlio è una copia di quello del padre. stesso codice, copia degli stessi dati, ecc. (es. fork() in UNIX)
+    - differenziato: spazi degli indirizzi di padre e figlio con codice e dati diversi (stesso processo dopo exec() in UNIX)
+
+
+//////////////////// CHAT-GPT ////////////////////
+
+SPAZIO DEGLI INDIRIZZI DUPLICATO
+Quando un processo padre crea un processo figlio con uno spazio di indirizzi duplicato, il nuovo processo (figlio) ottiene una copia esatta dello spazio di indirizzi
+del processo padre. Questo implica:
+    - Codice: Il codice eseguibile (testo del programma) è identico per entrambi i processi. Entrambi eseguono le stesse istruzioni.
+    - Dati: Le variabili globali e statiche sono duplicate. Inizialmente, le variabili globali e statiche del figlio sono copie esatte di quelle del padre.
+    - Heap: La memoria heap è duplicata. Qualsiasi allocazione dinamica di memoria viene duplicata (bisogna liberare la memoria anche nel processo figlio).
+    - Stack: Il contenuto dello stack del padre viene copiato nel figlio. Questo include le variabili locali e il contesto di esecuzione 
+             (come i parametri di funzione e le informazioni di ritorno).
+
+Implicazioni:
+    - Condivisione iniziale: I processi figlio e padre partono con un'istantanea dello stesso spazio di memoria. Inizialmente, entrambi i processi hanno le stesse variabili
+                             e dati.
+    - Modifiche separate: Dopo la creazione, padre e figlio operano in spazi di memoria separati. Se uno dei due processi modifica una variabile o una struttura dati,
+                          questa modifica non influisce sull'altro processo.
+                          Quindi, dopo la duplicazione iniziale, i due processi non condividono più lo spazio di indirizzi; eventuali modifiche non sono propagate.
+
+SPAZIO DEGLI INDIRIZZI DIFFERENZIATO
+In un sistema con spazio di indirizzi differenziato, il processo figlio non ha una copia esatta dello spazio di indirizzi del padre, ma ha uno spazio di indirizzi
+separato e distinto. Questo può implicare:
+    - Codice: Può essere diverso dal codice del padre, specialmente se il figlio viene creato e poi esegue un diverso programma (ad esempio, con una chiamata exec() in UNIX).
+    - Dati: I dati del figlio non sono una copia dei dati del padre. Ogni processo ha il proprio spazio di dati.
+    - Heap e Stack: Anche l'heap e lo stack sono separati e distinti. Qualsiasi allocazione o modifica dell'heap o dello stack nel padre non influisce sul figlio e viceversa.
+
+Implicazioni:
+    - Indipendenza: Il processo figlio è completamente indipendente dal processo padre in termini di spazio di indirizzi.
+                    Questo permette una maggiore flessibilità, come l'esecuzione di un programma completamente diverso.
+    - Creazione di Nuovi Programmi: Questo modello è utile quando un processo crea un nuovo processo che esegue un programma completamente diverso, 
+                                    come avviene con la chiamata exec() in UNIX, dove un processo può eseguire un nuovo programma mantenendo il suo PID e le sue risorse.
+
+//////////////////////////////////////////////////
+
+---TERMINAZIONE DI PROCESSI
+Ogni processo:
+    • è figlio di un altro processo (tranne init) 
+    • può essere a sua volta padre di processi
+Se un processo termina il padre può rilevare il suo stato di terminazione.
+
+Possibili effetti sui figli:
+    • tutti i figli terminano, oppure
+    • i figli continuano l’esecuzione e assumono come padre «adottivo» un altro processo (es: Unix)
+
+SO deve mantenere le informazioni relative alle relazioni di parentela nel descrittore di ogni processo:
+    • ad esempio, riferimento al padre, e/o
+    • riferimenti agli eventuali figli
+
+---INTERAZIONE TRA PROCESSI
+I processi, pesanti o leggeri, possono interagire
+
+Classificazione:
+    • processi indipendenti: due processi P1 e P2 sono indipendenti se l’esecuzione di P1 non è influenzata da P2, e viceversa
+    • processi interagenti: P1 e P2 sono interagenti se l’esecuzione di P1 è influenzata dall’esecuzione di P2, e/o viceversa
+
+Tipi di interazione:
+    • Cooperazione: interazione prevedibile e desiderata, insita nella logica del programma concorrente. I processi cooperanti collaborano
+      per il raggiungimento di un fine comune
+    • Competizione: interazione prevedibile ma "non desiderata" tra processi che interagiscono per sincronizzarsi nell’accesso a risorse comuni
+    • Interferenza: interazione non prevista e non desiderata, potenzialmente deleteria tra processi
+
+L’interazione può avvenire mediante:
+    • Memoria condivisa (modello ad ambiente globale): SO consente ai processi (thread) di condividere variabili; l’interazione avviene tramite l’accesso a variabili condivise.
+    Il SO prevede dei meccanismi per imporre dei vincoli di sincronizzazione nell’accesso alle variabili condivise.
+    • scambio di messaggi (modello ad ambiente locale): i processi non condividono variabili e interagiscono mediante meccanismi di trasmissione/ricezione di messaggi.
+    Il SO prevede dei meccanismi a supporto dello scambio di messaggi.
+
+ASPETTI DI PROCESSI INTERAGENTI
+    • concorrenza -> velocità
+    • suddivisione dei compiti tra processi -> modularità
+    • condivisione di informazioni
+        - assenza di replicazione: ogni processo accede alle stesse istanze di dati
+        - necessità di sincronizzare i processi nell’accesso a dati condivisi
+
+--- ESEMPI DI INTERAZIONE
+
+COMPETIZIONE: MUTUA ESCLUSIONE
+• Due thread P1 e P2 hanno accesso ad una struttura condivisa organizzata a pila rispettivamente per inserire e prelevare dati.
+• La struttura dati è rappresentata da un vettore stack i cui elementi costituiscono i singoli dati e da una variabile top che indica la posizione dell’ultimo
+  elemento contenuto nella pila.
+• I thread utilizzano le operazioni Inserimento e Prelievo per depositare e prelevare i dati dalla pila.
+
+IPOTESI: P1 e P2 eseguono concorrentemente operazioni (inserimento e prelievo rispettivamente) sullo stack condiviso.
+
+L’esecuzione contemporanea di queste operazioni da parte dei processi può portare ad un uso scorretto della risorsa.
+Consideriamo questa sequenza di esecuzione:
+    T0: top++; (P1)
+    T1: x=stack[top]; (P2)
+    T2: top--; (P2)
+    T3: stack[top]=y; (P1)
+• Viene assegnato a x un valore non definito e l’ultimo valore valido contenuto nella pila viene cancellato dal nuovo valore di y.
+• Potremmo individuare situazioni analoghe, nel caso di esecuzione contemporanea di una qualunque delle due operazioni da parte dei due processi.
+    -> c'è bisogno di mutua esclusione -> transazionalità
+    -> finchè non è terminata l’operazione corrente, nessun altra operazione può essere eseguita sullo stack.
+
+Istruzioni indivisibili:
+data un'istruzione I(d), che opera su un dato d, essa e` indivisibile (o atomica) , se, durante la sua esecuzione da parte di un processo P, il dato d non è accessibile
+ad altri processi.
+I(d), a partire da un valore iniziale d0 , puo`operare delle trasformazioni sullo stato di d, fino a giungere allo stato finale dF;
+    -> poiche` I(d) e` indivisibile, gli stati intermedi non possono essere rilevati da altri processi concorrenti. 
+
+PROCESSI COOPERANTI: PRODUTTORE & CONSUMATORE
+Due thread accedono a un buffer condiviso di dimensione limitata:
+• un processo svolge il ruolo di produttore di informazioni che verranno prelevate dall’altro processo (consumatore)
+• buffer rappresenta un deposito di informazioni condiviso
+
+Necessità di sincronizzare i processi:
+• quando il buffer è vuoto (il consumatore NON può prelevare messaggi)
+• quando il buffer è pieno (il produttore NON può depositare messaggi)
