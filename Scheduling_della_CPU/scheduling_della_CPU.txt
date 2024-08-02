@@ -1,0 +1,151 @@
+OBIETTIVO DELLA MULTIPROGRAMMAZIONE:
+    -> massimizzazione dell’utilizzo CPU!
+
+Scheduling della CPU: commuta l’uso della CPU tra i vari processi
+Scheduler della CPU (a breve termine): è quella parte del SO che seleziona dalla coda dei processi pronti il prossimo processo al quale assegnare l’uso della CPU
+
+La coda dei processi pronti contiene i PCB dei processi in stato ready. 
+La strategia di gestione della ready queue è realizzata mediante politiche (algoritmi) di scheduling
+
+TERMINOLOGIA, CPU BURST/IO BURST 
+ogni processo alterna:
+    • CPU burst: fasi in cui viene impiegata soltanto la CPU senza interruzioni dovute a operazioni di I/O
+    • I/O burst: fasi in cui il processo effettua I/O da/verso un dispositivo
+Quando un processo è in I/O burst, la CPU non viene utilizzata -> in un sistema multiprogrammato, lo short-term scheduler assegna la CPU a un nuovo processo
+
+TERMINOLOGIA, PROCESSI I/O BOUND & CPU BOUND:
+A seconda delle caratteristiche dei programmi eseguiti dai processi, è possibile classificare i processi in:
+    • I/O bound: prevalenza di attività di I/O
+        - Molti CPU burst di breve durata, intervallati da I/O burst di lunga durata
+    • CPU bound: prevalenza di attività di computazione
+        - CPU burst di lunga durata, intervallati da pochi I/O burst di breve durata
+
+TERMINOLOGIA, PRE-EMPTION:
+Gli algoritmi di scheduling si possono classificare in due categorie:
+    • senza prelazione (non pre-emptive): CPU rimane allocata al processo running finché esso non si sospende volontariamente o non termina
+    • con prelazione (pre-emptive): processo running può essere prelazionato, cioè SO può sottrargli CPU per assegnarla ad un nuovo processo
+I sistemi a divisione di tempo hanno sempre uno scheduling pre-emptive.
+
+POLITICHE & MECCANISMI
+Lo scheduler decide a quale processo assegnare la CPU; a seguito della decisione, viene attuato il cambio di contesto (context-switch).
+Dispatcher : è la parte di SO che realizza il cambio di contesto.
+
+Scheduler => POLITICHE
+Dispatcher => MECCANISMI
+
+---CRITERI DI SCHEDULING
+Per analizzare e confrontare i diversi algoritmi di scheduling, vengono considerati alcuni indicatori di performance:
+    • Utilizzo della CPU: percentuale media di utilizzo CPU nell’unità di tempo
+    • Throughput (del sistema): numero di processi completati nell’unità di tempo
+    • Tempo di Attesa (di un processo): tempo totale trascorso nella ready queue
+    • Turnaround (di un processo): tempo tra la sottomissione del job e il suo completamento
+    • Tempo di Risposta (di un processo): intervallo di tempo tra la sottomissione e l’inizio della prima risposta 
+                                          (a differenza del turnaround, non dipende dalla velocità dei dispositivi di I/O)
+
+In generale:
+    • devono essere massimizzati
+        - Utilizzo della CPU
+        - Throughput
+    • invece, devono essere minimizzati
+        - Turnaround (sistemi batch)
+        - Tempo di Attesa
+        - Tempo di Risposta (sistemi interattivi)
+
+=> Non è possibile soddisfare tutti i criteri contemporaneamente!!!
+
+A seconda del tipo di SO, gli algoritmi di scheduling possono avere diversi obiettivi. Ad esempio:
+    • nei sistemi batch:
+        - massimizzare throughput e minimizzare turnaround
+    • nei sistemi interattivi:
+        - minimizzare il tempo medio di risposta dei processi
+        - minimizzare il tempo di attesa
+
+---ALCUNI ALGORITMI DI SCHEDULING
+
+ALGORITMO DI SCHEDULING FCFS
+First-Come-First-Served: la coda dei processi pronti viene gestita in modo FIFO.
+    • i processi sono schedulati secondo l’ordine di arrivo nella coda
+    • algoritmo non pre-emptive
+
+Problemi:
+Non è possibile influire sull’ordine dei processi:
+- Nel caso di processi in attesa dietro a processi con lunghi CPU burst (processi CPU bound), il tempo di attesa è alto
+- Possibilità di effetto convoglio, se molti processi I/O bound seguono un processo CPU bound: scarso grado di utilizzo della CPU
+
+ALGORITMO DI SCHEDULING SJF (Shortest Job First)
+Per risolvere i problemi dell’algoritmo FCFS:
+    • per ogni processo nella ready queue, viene stimata la lunghezza del prossimo CPU-burst
+    • viene schedulato il processo con il CPU burst più corto (Shortest Job First)
+Si può dimostrare che questo algoritmo ottimizza il tempo di attesa.
+
+SJF può essere:
+    • non pre-emptive
+    • pre-emptive: (Shortest Remaining Time First, SRTF) se nella coda arriva un processo (Q) con CPU burst minore del CPU burst rimasto al processo running (P) -> pre-emption
+
+Problema: è difficile stimare la lunghezza del prossimo CPU burst di un processo (di solito, uso del passato per predire il futuro)
+            -> approccio approssimato e probabilistico -> exponential averaging.
+
+SCHEDULING CON PRIORITÀ
+Ad ogni processo viene assegnata una priorità:
+    • lo scheduler seleziona il processo pronto con priorità massima
+    • processi con uguale priorità vengono trattati in modo FCFS
+
+Priorità possono essere definite:
+    • internamente: SO attribuisce ad ogni processo una priorità in base a politiche interne
+    • esternamente: criteri esterni al SO (es: nice in UNIX)
+
+Le priorità possono essere costanti o variare dinamicamente!
+
+Problema: starvation dei processi
+Starvation: si verifica quando uno o più processi di priorità bassa vengono lasciati indefinitamente nella coda dei processi pronti, perchè vi è sempre almeno
+            un processo pronto di priorità più alta.
+
+Soluzione: modifica dinamica della priorità dei processi.
+Ad esempio:
+    • la priorità decresce al crescere del tempo di CPU già utilizzato (feedback negativo o aging)
+    • la priorità cresce dinamicamente con il tempo di attesa del processo (feedback positivo o promotion)
+
+ALGORITMO DI SCHEDULING ROUND-ROBIN
+Algoritmo preemptive tipicamente usato in sistemi time sharing.
+    • Ready queue gestita come una coda FIFO circolare (FCFS)
+    • ad ogni processo viene allocata la CPU per un intervallo di tempo costante delta_t (time slice o, quanto di tempo)
+        - il processo usa la CPU per delta_t (oppure si blocca/termina prima)
+        - allo scadere del quanto di tempo -> revoca della CPU e re-inserimento in coda
+
+-> RR può essere visto come un’estensione di FCFS con pre-emption periodica
+
+Obiettivo principale è la minimizzazione del tempo di risposta(adeguato per sistemi interattivi)
+    -> Tutti i processi sono trattati allo stesso modo (assenza di starvation)
+Problemi:
+    • dimensionamento del quanto di tempo
+        - delta_t piccolo (ma non troppo: delta_t >> T_contextSwitch ): tempi di risposta ridotti, ma alta frequenza di context switch => overhead eccessivo
+        - delta_t grande: overhead di context switch ridotto, ma tempi di risposta più alti
+    • trattamento equo di tutti i processi
+        - possibilità di degrado delle prestazioni del SO
+
+APPROCCI MISTI
+Nei SO reali, spesso si combinano diversi algoritmi di scheduling.
+
+Esempio: MULTIPLE LEVEL FEEDBACK QUEUES (MLFQ)
+    • più code, ognuna associata a un tipo di job diverso (batch, interactive, CPU-bound, ...)
+    • ogni coda ha una diversa priorità -> scheduling delle code con priorità (decido da quale coda prelevare il prossimo processo in base alla priorità) 
+    • ogni coda viene gestita con un algoritmo di scheduling distinto, eventualmente diverso (es. FCFS o Round Robin)
+    • i processi possono muoversi da una coda all’altra, in base alla loro storia:
+        - passaggio da priorità bassa ad alta: processi in attesa da molto tempo (feedback positivo)
+        - passaggio da priorità alta a bassa: processi che hanno già utilizzato molto tempo di CPU (feedback negativo)
+
+
+SCHEDULING IN UNIX (BerkleySoftwareDistribution 4.3)
+Obiettivo: privilegiare i processi interattivi!
+
+Scheduling MLFQ:
+    • più livelli di priorità (circa 160):la priorità è rappresentata da un intero; più grande è il suo valore, più bassa è la priorità
+    • Viene definito un valore di riferimento pzero:
+        - Priorità >= pzero: processi di utente ordinari
+        - Priorità < pzero: processi di sistema (ad es. esecuzione di system call)
+    • Ad ogni livello è associata una coda, gestita Round Robin (quanto di tempo: 100 ms)
+    • Aggiornamento dinamico delle priorità: ad ogni secondo viene ricalcolata la priorità di ogni processo
+    • La priorità di un processo decresce al crescere del tempo di CPU già utilizzato
+        - feedback negativo
+        - di solito, processi interattivi usano poco la CPU: in questo modo vengono favoriti
+    • L’utente può influire sulla priorità: comando nice (ovviamente soltanto per decrescere la priorità)
