@@ -1,0 +1,121 @@
+CLASSIFICAZIONE:
+    • Processi interagenti/indipendenti:
+        - due processi sono interagenti se l’esecuzione di un processo è influenzata dall’esecuzione dell’altro processo o viceversa.
+        - due processi sono indipendenti se l’esecuzione di ognuno non è in alcun modo influenzata dall’altro.
+    • Processi interagenti:
+        - cooperanti: i processi interagiscono volontariamente per raggiungere obiettivi comuni (fanno parte della stessa applicazione)
+        - in competizione: i processi, in generale, non fanno della stessa applicazione, ma interagiscono indirettamente, per l’acquisizione di risorse comuni.
+
+PROCESSI INTERAGENTI
+L’interazione puo` avvenire mediante due meccanismi:
+    • Comunicazione: scambio di informazioni tra i processi interagenti.
+    • Sincronizzazione: imposizione di vincoli temporali sull’esecuzione dei processi.
+        - Ad esempio, l’istruzione K del processo P1 puo` essere eseguita soltanto dopo l’istruzione J del processo P2
+
+RALIZZAZZAZIONE DELL'INTERAZIONE
+dipende dal modello di processo:
+    • modello ad ambiente locale (processi pesanti): non c’è condivisione di variabili
+        - la Comunicazione avviene attraverso scambio di messaggi
+        - la Sincronizzazione avviene attraverso scambio di eventi (es: segnali)
+    -> I meccanismi di comunicazione/sincronizzazione vengono realizzati dal sistema operativo
+    
+    • modello ad ambiente globale (thread): possibilità di condividere variabili
+        - Sincronizzazione: strumenti di sincronizzazione (es. lock, semafori..)
+        - Comunicazione: variabili condivise + strumenti di sincronizzazione (es. semafori)
+    -> Solo i meccanismi di sincronizzazione vengono realizzati dal sistema operativo. (la comunicazione viene realizzata dal programmatore)
+
+---COMUNICAZIONE
+
+SCAMBIO DI MESSAGGI
+Facciamo riferimento al modello ad ambiente locale:
+    • non vi è memoria condivisa
+    • i processi possono interagire (cooperano/competono)
+        - mediante scambio di messaggi: comunicazione
+        - mediante scambio di eventi (o segnali): sincronizzazione
+
+Il Sistema Operativo offre meccanismi a supporto della comunicazione tra processi (Inter Process Communication, o IPC).
+Operazioni Necessarie:
+    • send: spedizione di messaggi da un processo ad altri
+    • receive: ricezione di messaggi
+NB: Lo scambio di messaggi avviene mediante un CANALE DI COMUNICAZIONE!
+
+ASPETTI CARATTERIZZANTI dei MECCANISMI DI COMUNICAZIONE TRA PROCESSI
+    • tipo della comunicazione:
+        - diretta o indiretta; specifico il nome del destinatario o specifico un luogo da cui prelevare messaggi?
+        - simmetrica o asimmetrica; specifica se entrambi si devono conoscere o meno.
+        - bufferizzata o no
+    • caratteristiche del canale
+        - monodirezionale, bidirezionale
+        - uno-a-uno, uno-a-molti, molti-a-uno, molti-a-molti
+        - capacità
+        - modalità di creazione: automatica, non automatica
+    • caratteristiche del messaggio:
+        - dimensione
+        - tipo
+
+In che modo viene specificata la destinazione di un messaggio?
+    • Comunicazione diretta: al messaggio viene associato l’identificatore del processo destinatario (naming esplicito)
+        -> send(Proc, msg)
+    • Comunicazione indiretta: il messaggio viene indirizzato a una mailbox (contenitore di messaggi) dalla quale il destinatario preleverà il messaggio:
+        -> send(Mailbox, msg)
+    • Comunicazione simmetrica: il destinatario fa il naming esplicito del mittente
+        -> receive(Mittente, &msg)
+    • Comunicazione asimmetrica: il destinatario non è obbligato a conoscere l’identificatore del mittente: la variabile id raccoglie l’identificatore del mittente.
+        -> (es. Modello client-server) -> receive(&id, &M);
+
+Nella comunicazione indiretta:
+    • I processi cooperanti non sono tenuti a conoscersi reciprocamente e si scambiano messaggi depositandoli/prelevandoli da una mailbox condivisa.
+    • La mailbox è un canale utilizzabile da più processi che funge da contenitore dei messaggi
+Proprietà:
+    • il canale di comunicazione è rappresentato dalla mailbox (non viene creato automaticamente)
+    • il canale può essere associato a più di 2 processi:
+        - mailbox di sistema: molti-a-molti (come individuare il processo destinatario di un messaggio?)
+        - mailbox del processo destinatario (porta): molti-a-uno
+    • per ogni coppia di processi possono esistere più canali (uno per ogni mailbox condivisa)
+
+BUFFERING DEL CANALE
+Ogni canale di comunicazione è caratterizzato da una capacità (>=0): numero dei messaggi che è in grado di contenere contemporaneamente.
+Gestione secondo politica FIFO:
+    • i messaggi vengono posti in una coda in attesa di essere ricevuti
+    • la lunghezza massima della coda rappresenta la capacità del canale.
+        - Capacità nulla: non vi è accodamento perchè il canale non è in grado di gestire messaggi in attesa
+            -> processo mittente e destinatario devono sincronizzarsi all’atto di spedire(send) / ricevere(receive) il messaggio (comunicazione sincrona o rendez vous)
+            -> send e receive possono essere SOSPENSIVE!
+        - Capacità non nulla (limitata): esiste un limite N alla dimensione della coda:
+            -> se la coda non è piena, un nuovo messaggio viene posto in fondo
+            -> se la coda è piena: la send è sospensiva
+            -> se la coda è vuota: la receive può essere sospensiva
+        • [Capacità illimitata: lunghezza della coda teoricamente infinita: non c’è possibilità di sospensione.]
+
+SEND SINCRONA/ASINCRONA
+Abbiamo visto che, a seconda della capacità del canale, la send può essere sospensiva o no:
+    • Canale a Capacità nulla -> Send sincrona
+      Se il destinatario non è pronto per ricevere il messaggio, il mittente attende.
+    • Canale a Capacità non nulla -> Send asincrona
+      La send non è sospensiva, il mittente deposita il messaggio nel canale e continua la sua esecuzione.
+
+--- SINCRONIZZAZIONE
+La sincronizzazione permette di imporre vincoli sulle operazioni dei processi interagenti.
+Ad Esempio:
+    • Nella cooperazione:
+        - Per imporre un particolare ordine cronologico alle azioni eseguite dai processi interagenti.
+        - Per garantire che le operazioni di comunicazione avvengano secondo un ordine prefissato.
+        - Per notificare l’avvenimento di un evento
+    • Nella competizione:
+        - Per garantire la mutua esclusione dei processi nell’accesso alla risorsa condivisa.
+        - Per realizzare politiche di accesso alle risorse condivise
+
+SINCRONIZZAZIONE TRA PROCESSI NEL MODELLO AD AMBIENTE LOCALE
+In questo modello non c’e` la possibilita` di condividere memoria
+    • Gli accessi alle risorse "condivise" vengono controllati e coordinati dal sistema operativo.
+    • La sincronizzazione avviene mediante meccanismi offerti dal sistema operativo che consentono la notifica di “eventi” asincroni tra processi: es. SEGNALI UNIX
+
+SINCRONIZZAZIONE TRA PROCESSI NEL MODELLO AD AMBIENTE GLOBALE
+Facciamo riferimento a processi che possono condividere variabili (modello ad ambiente globale, o a memoria condivisa), in questo ambiente:
+    • cooperazione: lo scambio di messaggi avviene attraverso strutture dati condivise (ad es. mailbox)
+    • competizione: le risorse sono rappresentate da variabili condivise (ad esempio, puntatori a file). Ad es: Un oggetto condiviso non può essere
+                    acceduto da più di un processo alla volta (problema della mutua esclusione).
+                    
+-> In entrambi i casi è necessario sincronizzare i processi per coordinarli nell’accesso alla memoria condivisa!
+-> SO definisce alcuni strumenti nella memoria comune che consentono a ogni processo di aspettare il verificarsi di condizioni e di riattivare processi in attesa
+   (ad esempio: semafori, lock).

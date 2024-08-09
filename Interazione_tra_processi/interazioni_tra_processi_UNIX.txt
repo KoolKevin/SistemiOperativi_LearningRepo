@@ -1,0 +1,12 @@
+--- Caratteristiche della COMUNICAZIONE tra processi Unix
+
+Tra meccanismi di comunicazione:
+    • pipe: comunicazione locale (nell’ambito della stessa gerarchia di processi)
+    • fifo (named pipe): comunicazione locale (anche tra processi di gerarchie diverse)
+    • socket: comunicazione in ambiente distribuito (tra processi in esecuzione su nodi diversi di una rete)
+
+Per questo corso importante PIPE!
+comunicazione:
+    » indiretta (senza naming esplicito)
+    » canale unidirezionale molti-a-molti
+    » bufferizzata (capacità limitata): possibilità di sospensione sia per mittenti che per destinatari.
