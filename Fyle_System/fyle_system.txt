@@ -1,0 +1,159 @@
+Il file system (FS) è quella componente del SO che fornisce i meccanismi di accesso e memorizzazione delle informazioni allocate in memoria di massa.
+
+Realizza i concetti astratti
+    • di file: unità logica di memorizzazione
+    • di direttorio: insieme di file (e direttori)
+    • di partizione: insieme di file associato ad un particolare dispositivo fisico (o porzione di esso)
+NB: Le caratteristiche di file, direttorio e partizione sono del tutto indipendenti da natura e tipo di dispositivo utilizzato.
+
+--- ORGANIZZAZIONE DEL FS
+La struttura di un file system può essere rappresentata da un insieme di componenti organizzate in vari livelli:
+
+    • Applicazioni
+     ------------
+    • Struttura logica
+    • Accesso
+    • Organizzazione fisica
+    • Dispositivo virtuale
+     ------------
+    • Hardware: memoria di massa
+
+• Struttura logica: presenta alle applicazioni una visione astratta delle informazioni memorizzate, basata su file, directory, partizioni, ecc..
+  Realizza le operazioni di gestione di file e directory: copia, cancellazione, spostamento, ecc.
+• Accesso: definisce e realizza i meccanismi per accedere al contenuto dei file; in particolare:
+    - Definisce l’unità di trasferimento da/verso file: record logico
+    - Realizza i metodi di accesso (sequenziale, casuale, ad indice)
+    - Realizza i meccanismi di protezione
+• Organizzazione fisica: rappresentazione di file e directory sul dispositivo:
+    - Allocazione dei file sul dispositivo (unità di memorizzazione = blocco): mapping di record logici su blocchi. Vari metodi di allocazione.
+    - Rappresentazione della struttura logica sul dispositivo.
+• Dispositivo Virtuale: presenta una vista astratta del dispositivo, che appare come una sequenza di blocchi, ognuno di dimensione data costante.
+
+--- STRUTTURA LOGICA
+
+FILE
+È un insieme di informazioni; ad es.:
+    • programmi
+    • dati (in rappresentazione binaria)
+    • dati (in rappresentazione testuale)
+
+Ogni file è individuato da (almeno) un nome simbolico mediante il quale può essere riferito (ad esempio, nell’invocazione di comandi o di system call)
+Ogni file è caratterizzato da un insieme di ATTRIBUTI che, a seconda del SO, possono variare. Solitamente:
+    • tipo: stabilisce l’appartenenza a una classe (eseguibili, testo, musica, non modificabili, …; a volte definito dall'estensione, non in UNIX)
+    • indirizzo: puntatore/i a memoria secondaria
+    • dimensione: numero di byte contenuti nel file
+    • data e ora (di creazione e/o di modifica)
+In SO multiutente anche:
+    • utente proprietario
+    • protezione: diritti di accesso al file per gli utenti del sistema
+
+DESCRITTORE DEL FILE
+è la struttura dati che contiene gli attributi del file.
+Ogni descrittore di file deve essere memorizzato in modo persistente.
+    -> il SO mantiene l’insieme dei descrittori di tutti i file presenti nel file system in apposite strutture in memoria secondaria (ad es. UNIX: i-list)
+
+DIRECTORY
+Strumento per organizzare i file all’interno del file system:
+    • una directory può contenere più file
+    • è realizzata mediante una struttura dati che prevede un elemento per ogni file (o directory) in essa contenuto;
+      essa associa al nome di ogni file le informazioni che consentono di localizzarlo in memoria di massa.
+Operazioni sui direttori:
+    • Creazione/cancellazione di directory
+    • Aggiunta/cancellazione di file
+    • Listing: elenco di tutti i file contenuti nella directory
+    • Attraversamento della directory
+    • Ricerca di file in directory
+La struttura logica delle directory può variare a seconda del SO. Schemi più comuni:
+    • a un livello
+    • a due livelli
+    • ad albero
+    • a grafo aciclico (link; ad es. UNIX)
+
+DIRECTORY E PARTIZIONI
+Una singola unità di memorizzazione secondaria (es. Disco) può contenere più partizioni.
+    -> Unità disco e organizzazione/posizione di directory all’interno del file system devono essere correlati?
+FILE SYSTEM MOUNTING
+Molti SO richiedono il mounting esplicito all’interno del file system prima di poter usare una (nuova) unità disco o una partizione.
+
+--- ACCESSO
+
+OPERAZIONI SUI FILE
+Compito del SO è consentire l’accesso on-line ai file:
+ogni volta che un processo modifica un file, tale cambiamento è immediatamente visibile a tutti gli altri processi.
+Tipiche Operazioni:
+    • Creazione: allocazione di un file in memoria secondaria e inizializzazione dei suoi attributi
+    • Lettura di record logici dal file
+    • Scrittura: inserimento di nuovi record logici all’interno di file
+    • Cancellazione: eliminazione del file dal file system
+NB: Ogni operazione richiederebbe la localizzazione e l’accesso ad informazioni sulla memoria secondaria (es. disco), come:
+    • indirizzi dei record logici a cui accedere
+    • altri attributi del file (diritti di accesso, ecc.)
+    • contenuto del file (record logici)
+        -> costo elevato!
+Per migliorare l’efficienza:
+    • SO mantiene in memoria una struttura che registra i file attualmente in uso (file aperti)
+        -> tabella dei file aperti per ogni file aperto {puntatore al file, posizione su disco, ...}
+    • viene fatto il «memory mapping» dei file aperti: i file aperti (o porzioni di essi) vengono temporaneamente copiati in memoria centrale -> accessi più veloci
+Operazioni necessarie:
+    • Apertura: introduzione di un nuovo elemento nella tabella dei file aperti e eventuale memory mapping del file.
+    • Chiusura: salvataggio del file in memoria secondaria ed eliminazione dell’elemento corrispondente dalla tabella dei file aperti.
+
+STRUTTURA INTERNA DEI FILE
+Ogni dispositivo di memorizzazione secondaria viene partizionato in blocchi (o record fisici):
+    DEF. BLOCCO: unità di trasferimento fisico nelle operazioni di I/O da/verso il dispositivo. Sempre di dimensione FISSA!
+Le applicazioni vedono il file come un insieme di record logici:
+    DEF. RECORD LOGICO: unità di trasferimento logico nelle operazioni di accesso al file (es. lettura, scrittura di blocchi). Di dimensione VARIABILE!
+BLOCCHI & RECORD LOGICI
+Uno dei compiti di SO (parte di gestione del file system) è stabilire una corrispondenza tra record logici e blocchi.
+Di solito:
+    Dimensione(blocco) >>> Dimensione(record logico) -> impacchettamento di record logici all’interno di blocchi
+
+METODI DI ACCESSO
+L’accesso a file può avvenire secondo varie modalità:
+    • accesso sequenziale (tipo liste; con I/O pointer, bisogna scorrere; UNIX)
+    • accesso diretto (tipo vettori)
+    • accesso a indice
+Il metodo di accesso è indipendente:
+    • dal tipo di dispositivo utilizzato
+    • dalla tecnica di allocazione dei blocchi in memoria secondaria
+
+FILE SYSTEM E PROTEZIONE
+Il proprietario/creatore di un file dovrebbe avere la possibilità di controllare:
+    • quali azioni sono consentite sul file
+    • da parte di chi
+Possibili azioni su file (“diritti”):
+    - Read      - Write
+    - Execute   - Append
+    - Delete    - List
+
+--- ORGANIZZAZIONE FISICA
+SO si occupa anche della realizzazione del file system sui dispositivi di memorizzazione secondaria:
+    • realizzazione dei descrittori e loro organizzazione (non mostrato)
+    • allocazione dei blocchi fisici
+    • gestione dello spazio libero
+-> Come può essere rappresentato il file system sui dispositivi di memorizzazione secondaria?
+
+METODI DI ALLOCAZIONE
+Il blocco è l’unità di allocazione sul disco. Ogni blocco contiene un insieme di record logici contigui.
+Quali sono le tecniche più comuni per l’allocazione dei blocchi sul disco?
+    • Allocazione contigua
+      Ogni file è mappato su un insieme di blocchi fisicamente contigui.
+    • Allocazione a lista
+      I blocchi sui quali viene mappato ogni file sono organizzati in una lista concatenata.
+    • Allocazione a indice
+      Simile ad allocazione a lista ma tutti i puntatori ai blocchi utilizzati per l’allocazione di un determinato file sono concentrati in un unico
+      blocco per quel file (blocco indice)
+NB: guarda le figure sulle slide e capisci prima.
+
+Riassumendo, gli aspetti caratterizzanti sono:
+    • grado di utilizzo della memoria
+    • tempo di accesso medio al blocco
+    • realizzazione dei metodi di accesso
+Esistono SO che adottano più di un metodo di allocazione; spesso:
+    • file piccoli -> allocazione contigua
+    • file grandi -> allocazione a indice
+
+TABELLA DI ALLOCAZIONE DEI FILE (FAT)
+Alcuni SO (ad es. windows, OS/2, dos, ntfs) realizzano l’allocazione a lista in modo più efficiente e robusto:
+    • per ogni partizione, viene mantenuta una tabella (FAT) in cui ogni elemento rappresenta un blocco fisico
+    • concatenamento dei blocchi sui quali è allocato un file è rappresentato nella FAT
