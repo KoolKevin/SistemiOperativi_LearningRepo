@@ -1,0 +1,62 @@
+CONCETTI GENERALI
+- accesso sequenziale
+- il puntatore al file (I/O Pointer) registra la posizione corrente
+- assenza di strutturazione -> file = sequenza di bytes (stream) terminata dalla condizione di EOF
+- vari modi di accesso (lettura, scrittura, lettura/scrittura, etc.)
+- accesso subordinato all’operazione di apertura, cioè prima si apre, poi si accede e infinde si chiude
+
+TABELLA DEI FILE APERTI e FILE DESCRIPTOR
+A ogni PROCESSO è associata una TABELLA DEI FILE APERTI di dimensione limitata allocata nella propria User Structure. Ogni elemento della tabella rappresenta
+un file aperto dal processo ed è individuato da un indice intero: FILE DESCRIPTOR.
+I file descriptor 0,1,2 sono aperti automaticamente alla creazione del processo e individuano rispettivamente standard input, output, error.
+
+STRUTTURE DATI DEL KERNEL
+Per realizzare l’accesso ai file, il sistema operativo utilizza due strutture dati GLOBALI, allocate nell’area dati del kernel:
+    • la TABELLA DEI FILE ATTIVI: per ogni file APERTO, contiene una copia del suo i-node:
+        -> in questo modo si rendono più efficienti le operazioni di accesso evitando i lenti accessi al disco per ottenere attributi dei file acceduti.
+    • la TABELLA DEI FILE APERTI DI SISTEMA: ha un elemento per ogni OPERAZIONE DI APERTURA (guarda NB) relativa a file aperti e non ancora chiusi; ogni elemento contiene:
+        - l’I/O pointer, che indica la posizione corrente all’interno del file
+        - un puntatore all’i-node del file nella tabella dei file attivi
+        NB: se due processi aprono separatamente lo stesso file F, la tabella conterrà due elementi distinti associati a F.
+
+Riassumendo:
+    - tabella dei file aperti di processo: nella User Structure del processo, contiene un elemento per ogni file aperto dal processo
+    - tabella dei file attivi: contiene un elemento per ogni file aperto nel sistema
+    - tabella dei file aperti di sistema: contiene un elemento per ogni sessione di accesso a file nel sistema
+
+QUALI SONO LE RELAZIONI TRA QUESTE STRUTTURE?
+ogni entry nella TABELLA DEI FILE APERTI DI UN PROCESSO contiene un riferimento alla relativa entry nella TABELLA DEI FILE APERTI DI SISTEMA. Quest'ultima contiene
+un elemento per ogni sessione di apertura di file. questo significa che a processi diversi che accedono allo stesso file, corrispondono entry DISTINTE. Ogni elemento
+di questa tabella contiene il puntatore alla posizione corrente (I/O pointer)
+    -> più processi possono accedere contemporaneamente allo stesso file, ma con I/O pointer distinti!
+Oltre all'I/O pointer, nelle entry della TABELLA DEI FILE APERTI DI SISTEMA, si trova un riferimento al relativo i-node contenuto nella TABELLA DEI FILE ATTIVI.
+
+Riassumendo, grazie al riferimento alla TABELLA DEI FILE APERTI DI SISTEMA ogni file contenuto nella TABELLA DEI FILE APERTI DI UN PROCESSO ha accesso al suo personale 
+I/O pointer ed al i-node del file aperto.
+
+CASO NOTEVOLO: dopo una fork() processo padre e processo figlio hanno la stessa User Structure e di conseguenza la stessa TABELLA DEI FILE APERTI DI PROCESSO. Questo significa
+che processi padre e figlio condividono lo stesso I/O pointer dei file aperti dal padre prima della creazione del figlio. Questo potrebbe causare problemi, quindi meglio
+chiudere i file aperti dal padre prima di iniziare ad operare con il figlio.
+
+SYSTEM CALL PER ACCESSO AI FILE
+Unix permette ai processi di accedere a file, mediante un insieme di system call, tra le quali:
+    • apertura/creazione: open(), creat()
+    • chiusura: close()
+    • lettura: read()
+    • scrittura: write()
+    • accesso «diretto»: lseek()
+non le descrivo qua, guarda le slide se hai dei dubbi.
+
+SYSTEM CALL PER GESTIONE DEI FILE e DIRECTORY
+I processi possono gestire i file tramite alcune system call, tra le quali:
+    • cancellazione: unlink()
+    • linking: link()
+    • Verifica dei diritti di accesso: access()
+    • Verifica degli attributi (i-node): stat()
+    • Modifica diritti di accesso: chmod()
+    • Modifica proprietario: chown()
+    • Per cambiare direttorio (v. Comando cd): chdir
+    • Apertura di direttori: opendir
+    • chiusura di direttori: closedir
+    • lettura di direttorio: readdir
+    • creazione di direttori: mkdir

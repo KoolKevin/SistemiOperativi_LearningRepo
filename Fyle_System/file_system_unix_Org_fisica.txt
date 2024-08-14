@@ -1,0 +1,114 @@
+CARATTERISTICHE GENERALI
+    • Omogeneità: tutto è file, tre categorie :
+        - file ordinari
+        - direttori
+        - dispositivi fisici: file speciali (nel direttorio /dev )
+    • ad ogni file possono essere associati uno o più nomi simbolici, ma
+    • ad ogni file è associato uno ed un solo descrittore (I-NODE), univocamente identificato da un intero (I-NUMBER)
+      (CURIOSITÀ sul NOME I-NODE: Il termine "inode" deriva da "index node" perché questi descrittori fungono da nodi di indice per i file.
+       In altre parole, un i-node agisce come una struttura di indice che non contiene i dati del file stesso, ma contiene i riferimenti ai blocchi di dati effettivi sul disco.
+       Quando si accede a un file, il sistema operativo utilizza l'i-node per trovare dove i dati del file sono memorizzati fisicamente)
+
+--- ORGANIZZAZIONE FISICA
+Il metodo di allocazione utilizzato in Unix è ad indice(a più livelli di indirizzamento). I blocchi non sono quindi contigui ma sono sparsi su disco.
+
+Formattazione del disco in blocchi fisici (dimensione del blocco: 512-4096 Bytes).
+
+La superficie del disco File System è partizionata in 4 regioni:
+    • boot block: contiene le procedure di inizializzazione del sistema (da eseguire al bootstrap)
+    • super block: fornisce
+        - i limiti delle 4 regioni
+        - il puntatore a una lista dei BLOCCHI LIBERI
+        - il puntatore a una lista degli I-NODE LIBERI (Gli I-node non vengono creati "al volo" ogni volta che viene creato un file, piuttosto sono preallocati
+          quando il file system viene creato o formattato.)
+    • i-list: contiene la lista di tutti i descrittori (i-node) dei file, direttori e dispositivi presenti nel file system (accesso con l’indice i-number)
+    • data blocks: è l’area del disco effettivamente disponibile per la memorizzazione dei file, contiene:
+        - i blocchi allocati
+        - i blocchi liberi (organizzati in una lista collegata)
+
+(CHIARIMENTO: Il termine "Disco File System" in questo contesto si riferisce a un'unità LOGICA di archiviazione che può essere un'intera partizione di un disco
+ o un disco fisico completo, su cui è stato creato un file system. Anche se il file system può essere montato su più partizioni o dischi, la divisione in boot block,
+ super block, i-list, data blocks si applica a ciascuna unità LOGICA di archiviazione che contiene un file system. 
+ Per esempio:
+    • Partizioni: Un singolo disco fisico può essere diviso in più partizioni, ognuna delle quali può contenere un file system. Ciascuna partizione è trattata
+                  come un'unità logica separata con il proprio boot block, super block, i-list e data blocks.
+    • Mounting: In Unix e Linux, un file system può essere montato su un punto di montaggio (directory) nel file system principale. Questo permette di combinare
+                file system diversi in una singola gerarchia di directory. Ogni file system montato, anche se si trova su dischi o partizioni differenti, avrà la sua
+                struttura interna con boot block, super block, i-list e data blocks.) 
+    // qua sono stato impreciso ma lascio stare, come esempio solo partizioni bootable contengono un boot block
+
+I-NODE
+È il descrittore del file. Tra gli attributi contenuti nell’i-node vi sono:
+    • tipo di file:
+        » ordinario
+        » direttorio
+        » file speciale, per i dispositivi.
+    • proprietario, gruppo (user-id, group-id)
+    • dimensione
+    • data
+    • 12 bit di protezione
+    • numero di links
+    • 13-15 indirizzi di blocchi (a seconda della realizzazione)
+
+INDIRIZZAMENTO
+Il metodo di allocazione utilizzato in Unix è ad indice, a più livelli di indirizzamento.
+L’allocazione del file non è su blocchi fisicamente contigui; nell’i-node sono contenuti puntatori a blocchi(ad esempio 13), dei quali:
+    • i primi 10 indirizzi: riferiscono blocchi di dati (indirizzamento diretto)
+    • 11° indirizzo : indirizzo di un blocco contenente a sua volta indirizzi di blocchi dati (blocco indice, 1 livello di indirettezza)
+    • 12° indirizzo: indirizzo di un blocco indice contenente indirizzi di blocchi indice contenenti indirizzi a blocchi dati (due livelli di indirettezza)
+    • 13° indirizzo: ... tre livelli di indirettezza
+
+Ipotesi:
+Dimensione del blocco = 512 byte = 0,5 KB e indirizzi di 32 bit (4 byte)
+    -> 1 blocco contiene 128 indirizzi
+
+Quindi:
+    • 10 blocchi di dati sono accessibili direttamente
+        -> file di dimensioni minori di (10*512) byte = 5120 byte = 5KB sono ACCESSIBILI DIRETTAMENTE
+    • 128 blocchi di dati sono sono accessibili con indirezione singola (mediante il puntatore 11)
+        -> file di max 128*512 byte = 65536 byte = 64KB (+ 5KB dei 10 puntatori precedenti)
+    • 128*128 blocchi di dati sono accessibili con indirezione doppia (mediante il puntatore 12)
+        -> 128*128*512 byte = 8MB
+    • 128*128*128 blocchi di dati sono accessibili con indirezione tripla (mediante il puntatore 13):
+        -> 128*128*128*512 byte = 1GB
+Per esempio per leggere un file di 5MB:
+    • Per i primi 5kB il SO traseferisce direttamente i blochi puntati dai primi 10 puntatori dell'i-node.
+    • I successivi 64kB vengono letti trasferendo i blocchi riferiti dai 128 indirizzi contenuti nel blocco indice referenziato dal puntatore 11.
+    • I rimanenti 'x'MB vengono letti come nel punto precedente, ma facendo una specie di "doppio ciclo".
+
+La dimensione massima del file è dell’ordine del Gigabyte:
+    -> Dimensione massima = 1GB + 8MB + 64KB + 5KB
+    -> L’accesso a file di piccole dimensioni è più veloce rispetto al caso di file grandi siccome non devo risolvere vari livelli di indirettezza
+
+Grazie a questa metodologia di allocazione della memoria secondaria:
+    - possibilità di accesso pseudo-diretto
+    - maggiore velocità di accesso (rispetto a liste che vanno scorse)
+
+//SKIP Protezione: controllo dell’accesso ai file
+
+DIRETTORI
+• Anche il direttorio è rappresentato nel File System da un file.
+• Ogni file-direttorio contiene un insieme di record logici con la seguente struttura: nome_relativo | i-number
+• ogni record rappresenta un file appartenente al direttorio:
+    - per ogni file (o direttorio) appartenente al direttorio considerato, viene memorizzato il suo nome relativo, al quale viene associato il valore del suo i-number
+      (id numerico per l'i-node del file che lo identifica univocamente al contrario del nome)
+
+HARD e SOFT LINKS (CHAT-GPT)
+Gli hard link e i soft link (o symbolic link) sono due metodi utilizzati nei sistemi operativi Unix-like per creare collegamenti a file. Anche se entrambi consentono
+di accedere a un file tramite un nome alternativo, ci sono differenze sostanziali nel modo in cui funzionano.
+    • Hard Link
+        - Stesso i-node: Un hard link è un collegamento diretto a un file esistente. Quando crei un hard link, stai creando un altro nome che punta allo stesso i-node
+          del file originale. Questo significa che entrambi i nomi (il file originale e l'hard link) condividono esattamente gli stessi dati e metadati
+          (come permessi, proprietà, timestamp, ecc.).
+        - Indipendenza dei nomi: Se cancelli il file originale (rimuovendo il suo nome), i dati non vengono persi finché esiste almeno un hard link che punta a quell'i-node.
+          I dati vengono effettivamente rimossi solo quando l'ultimo hard link viene cancellato.
+        - Stesso filesystem: Gli hard link possono essere creati solo all'interno dello stesso filesystem. Non puoi creare un hard link a un file che risiede su un filesystem
+          diverso.
+        - Limite di directory: Non puoi creare hard link a directory per evitare problemi con la struttura ad albero del filesystem (evitare cicli infiniti).
+    • Soft Link (Symbolic Link)
+        - Puntatore al percorso: Un soft link, invece, è un file speciale che contiene il percorso di un altro file o directory. Quando accedi a un soft link,
+          il sistema operativo segue il percorso memorizzato nel link per trovare il file o la directory di destinazione.
+        - Indipendenza dal file originale: Se cancelli il file originale a cui punta un soft link, il soft link diventa un "link rotto" (broken link),
+          cioè un collegamento che non punta più a nulla di valido.
+        - Cross-filesystem: I soft link possono puntare a file o directory su filesystem diversi. Questo li rende più flessibili rispetto agli hard link.
+        - Directory: Puoi creare un soft link che punta a una directory, il che è utile per creare alias o scorciatoie a directory.

@@ -56,7 +56,8 @@ DIRECTORY
 Strumento per organizzare i file all’interno del file system:
     • una directory può contenere più file
     • è realizzata mediante una struttura dati che prevede un elemento per ogni file (o directory) in essa contenuto;
-      essa associa al nome di ogni file le informazioni che consentono di localizzarlo in memoria di massa.
+      essa associa al nome di ogni file le informazioni che consentono di localizzarlo in memoria di massa (DESCRITTORE). Grazie alle directory si implementano quindi gli 
+      (hard) link in SO come Linux.
 Operazioni sui direttori:
     • Creazione/cancellazione di directory
     • Aggiunta/cancellazione di file
@@ -78,8 +79,7 @@ Molti SO richiedono il mounting esplicito all’interno del file system prima di
 --- ACCESSO
 
 OPERAZIONI SUI FILE
-Compito del SO è consentire l’accesso on-line ai file:
-ogni volta che un processo modifica un file, tale cambiamento è immediatamente visibile a tutti gli altri processi.
+Compito del SO è consentire l’accesso on-line ai file: ogni volta che un processo modifica un file, tale cambiamento è immediatamente visibile a tutti gli altri processi.
 Tipiche Operazioni:
     • Creazione: allocazione di un file in memoria secondaria e inizializzazione dei suoi attributi
     • Lettura di record logici dal file
@@ -91,7 +91,7 @@ NB: Ogni operazione richiederebbe la localizzazione e l’accesso ad informazion
     • contenuto del file (record logici)
         -> costo elevato!
 Per migliorare l’efficienza:
-    • SO mantiene in memoria una struttura che registra i file attualmente in uso (file aperti)
+    • SO mantiene in memoria una struttura che registra i file attualmente in uso (tabella dei file attivi)
         -> tabella dei file aperti per ogni file aperto {puntatore al file, posizione su disco, ...}
     • viene fatto il «memory mapping» dei file aperti: i file aperti (o porzioni di essi) vengono temporaneamente copiati in memoria centrale -> accessi più veloci
 Operazioni necessarie:
