@@ -1,0 +1,100 @@
+INTERAZIONE TRA PROCESSI UNIX
+I processi Unix non possono condividere memoria (modello ad ambiente locale)
+L’interazione tra processi può avvenire:
+    - mediante la condivisione di file:
+        -> complessità : realizzazione della sincronizzazione tra i processi.
+    - attraverso specifici strumenti di Inter Process Communication:
+        -> per la comunicazione tra processi sulla stessa macchina:
+            »pipe (tra processi della stessa gerarchia)
+            »fifo (qualunque insieme di processi)
+        -> per la comunicazione tra processi in nodi diversi della stessa rete:
+            »socket
+
+--- PIPE
+La pipe è un CANALE di comunicazione tra processi:  
+    • unidirezionale: accessibile ad un estremo in lettura ed all'altro in scrittura (anche comunicazione bidirezionale tra processi, ma va rigidamente disciplinata)
+    • molti-a-molti:
+        - più processi possono spedire messaggi attraverso la stessa pipe
+        - più processi possono ricevere messaggi attraverso la stessa pipe
+    • con capacità limitata:
+        - la pipe è in grado di gestire l’accodamento di un numero limitato di messaggi, gestiti in modo FIFO: il limite è stabilito dalla dimensione della pipe (es.64K bytes).
+            -> comunicazione asincrona
+        - se la pipe è vuota: un processo che legge si blocca
+        - se la pipe è piena: un processo che scrive si blocca
+            -> Sincronizzazione automatica: read e write da/verso pipe possono essere sospensive!
+    • OMOGENEITA’ con i FILE: accesso con le stesse system call dei file.
+    • comunicazione tra processi indiretta (senza naming esplicito): la pipe è una mailbox con un lato di lettura ed uno di scrittura
+
+QUALI PROCESSI POSSONO COMUNICARE MEDIANTE UNA PIPE?
+Per mittente e destinatario il riferimento al canale di comunicazione è un file descriptor
+    -> Soltanto i processi appartenenti a una stessa gerarchia (cioè, che hanno un antenato in comune (copia di User Structure)) possono scambiarsi messaggi mediante pipe;
+Ad esempio, possibilità di comunicazione tra:
+    • processi fratelli (che ereditano la pipe dal processo padre)
+    • tra un processo padre e un processo figlio
+    • tra nonno e nipote
+
+CHIUSURA DI UNA PIPE
+Ogni processo può chiudere un estremo della pipe con una close(). Un estremo della pipe viene effettivamente chiuso (cioè, la comunicazione non e` piu` possibile) quando
+tutti i processi che ne avevano visibilità hanno compiuto una close (eliminazione delle entry dalla Tabella dei File Attivi).
+
+Se un processo P:
+    • tenta una lettura da una pipe vuota il cui lato di scrittura è effettivamente chiuso: read ritorna 0
+    • tenta una scrittura da una pipe il cui lato di lettura è effettivamente chiuso: write ritorna -1, ed il segnale SIGPIPE viene inviato a P (broken pipe).
+
+RIDIREZIONE DI I/O E PIPING
+Come realizzare la redirezione di comandi su file?
+Ad esempio: 
+    $ ls –lR > pippo
+
+-> Viene creato un processo che andrà ad eseguire(exec) il comando ls in modo tale che lo std. output di ls sia ridiretto nel file pippo!
+
+• Ridirezione in output
+Vogliamo che tutte le informazioni che il comando invia allo std.output (fd 1) siano scritte nel file dato.
+Soluzione:
+    1.chiudo il file descriptor 1 (standard output): close(1);
+        -> libero l’elemento di indice 1 nella tab. dei file aperti
+    2.apro il file dato : fd=open(“pippo”, O_WRONLY);
+        -> il primo elemento libero della tab. dei file aperti è quello di indice 1, pertanto fd vale 1; quindi ogni write sul file descriptor 1 scriverà nel file pippo
+    3.eseguo il comando : execlp(argv[1],argv[1],(char *)0);
+        -> se il comando scrive sullo std.output, le informazioni corrispondenti verranno scritte nel file pippo (exec conserva la user structure per cui anche i file aperti)
+
+• Ridirezione in input
+Ad esempio:
+    $ grep ciao < testo.txt
+
+Vogliamo che i dati che il comando grep acquisirebbe dallo std.input (fd 0) siano lette dal file dato “testo.txt”.
+Soluzione:
+    1.chiudo il file descriptor 0 (standard input): close(0);
+        -> libero l’elemento di indice 0 nella tab. dei file aperti
+    2.apro il file dato : fd=open(“testo.txt”, O_RDONLY);
+        -> il primo elemento libero della tab. dei file aperti è quello di indice 0, pertanto fd vale 0; quindi ogni read dal file descriptor 0 leggerà dal file testo.txt
+    3.eseguo il comando : execlp(“grep”, “grep”, “ciao”, (char *)0);
+        -> se comando grep legge dal file di standard input, le informazioni saranno lette dal file testo.txt.  
+
+• Piping di comandi
+Ad esempio:
+    $ ls –lR | grep Jun | more
+
+I comandi ls, grep e more vengono eseguiti CONCORRENTEMENTE in modo tale che:
+    • l’output di ls venga dato in input a grep
+    • l’output di grep venga dato in input a more
+Vengono creati 3 processi (uno per ogni comando), in modo che:
+    • Lo std. output di ls sia ridiretto nello std. input di grep
+    • Lo std. output di grep sia ridiretto nello std. input di more
+-> Dobbiamo quindi mettere in comunicazione i 3 processi: usiamo 2 pipe!
+    -> per realizzare la redirezione si usa la system call 'int dup(int fd)' Per duplicare un elemento della tab. dei file aperti di processo nella prima posizione disponibile
+
+--- FIFO
+
+La pipe ha due svantaggi:
+    • consente la comunicazione solo tra processi in relazione di parentela
+    • non è persistente: viene distrutta quando terminano tutti i processi che la usano.
+Per realizzare la comunicazione tra una coppia di processi non appartenenti alla stessa gerarchia?
+    -> FIFO
+
+Una FIFO è una pipe con un nome nel file system (named pipe):
+    • canale unidirezionale del tipo first-in-first- out
+    • è rappresentata da un file nel file system: persistenza, visibilità potenzialmente globale
+    • ha un proprietario, un insieme di diritti ed una lunghezza
+    • è creata dalla system call: mkfifo()
+    • è aperta e acceduta con le stesse system call dei file (open, close, unlink, read, write)
