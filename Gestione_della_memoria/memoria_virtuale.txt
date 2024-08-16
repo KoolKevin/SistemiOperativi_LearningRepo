@@ -1,0 +1,146 @@
+Se la dimensione della memoria non fosse sufficiente a contenere gli spazi logici che si vogliono allocare?
+
+--- OVERLAY
+In generale, la memoria disponibile può non essere sufficiente ad accogliere codice e dati di un processo. Una possibile soluzione è l’overlay.
+Questa tecnica ha l’obiettivo di mantenere in memoria istruzioni e dati:
+    • che vengono utilizzati più frequentemente
+    • che sono necessari nella fase corrente
+Codice e dati di un processo vengono suddivisi dal PROGRAMMATORE in parti separate (chiamate overlay) che vengono caricate e scaricate dinamicamente dal gestore di overlay
+(di solito esterno al SO).
+
+ESEMPIO OVERLAY | ASSEMBLER A 2 PASSI:
+Un assembler a 2 passi è un programma (pensalo come ad un compilatore per assembly) che produce l’eseguibile di un programma scritto in assembly, mediante 2 fasi sequenziali
+    1. Creazione della tabella dei simboli (passo 1)
+    2. Generazione dell’eseguibile (passo 2)
+L'assembler ha 4 componenti distinte nel suo codice:
+    • Tabella dei simboli (ad es. dim 20KB)
+    • Sottoprogrammi comuni ai due passi (ad es. 30KB)
+    • Codice passo 1 (ad es. 70KB)
+    • Codice passo 2 (ad es. 80KB)
+-> lo spazio richiesto per l’allocazione integrale dell’assembler è quindi di 200KB
+
+Ipotesi: ho solo 150KB liberi
+Soluzione: 2 overlay da caricare in sequenza (passo 1 e passo 2);
+           caricamento/scaricamento vengono effettuati da una parte aggiuntiva di codice (gestore di overlay, dimensione 10KB) aggiunta al codice dell’assembler.
+Si avrà quindi che durante l'esecuzione del passo1 in memoria non sarà caricato il codice del passo 2 (tot = 20 + 30 + 70 + 10 = 130 KB), e durante l'esecuzione del
+passo2 viceversa (tot = 140 KB) 
+
+--- MEMORIA VIRTUALE
+La dimensione della memoria può rappresentare un vincolo importante, riguardo a:
+    • dimensione dei processi
+    • grado di multiprogrammazione
+Può essere desiderabile un sistema di gestione della memoria che:
+    • consenta la presenza di più processi in memoria (ad es. partizioni multiple, paginazione e segmentazione), INDIPENDENTEMENTE dalla dimensione dello spazio disponibile
+    • svincoli il grado di multiprogrammazione dalla dimensione effettiva della memoria
+
+Con le tecniche viste finora:
+    • l’intero spazio logico di ogni processo è allocato in memoria Oppure
+    • overlay, caricamento dinamico: si possono allocare/deallocare parti dello spazio di indirizzi
+        -> realizzazione a carico del programmatore
+DEF: MEMORIA VIRTUALE
+È un metodo di gestione della memoria che consente l’esecuzione di processi non completamente allocati in memoria, in modo completamente trasparente per il programmatore
+e per i processi stessi.
+Vantaggi:
+    • dimensione spazio logico degli indirizzi non vincolata dall'estensione della memoria
+    • grado di multiprogrammazione indipendente dalla dimensione della memoria fisica
+    • efficienza: caricamento di un processo e swapping hanno un costo più limitato (meno I/O)
+    • astrazione: il programmatore non deve preoccuparsi dei vincoli relativi alla dimensione della memoria
+
+PAGINAZIONE SU RICHIESTA
+Di solito la memoria virtuale è realizzata mediante tecniche di paginazione su richiesta:
+    • tutte le pagine di ogni processo risiedono in memoria di massa («backing store»);
+    • durante l’esecuzione alcune di esse vengono trasferite, all’occorrenza, da backing store a memoria centrale, e viceversa.
+PAGER: modulo del SO che realizza i trasferimenti delle pagine da/verso memoria secondaria/ centrale ("swapper" di pagine)
+    -> paginazione SU RICHIESTA (o "su domanda"): pager lazy (“pigro”) trasferisce in memoria centrale una pagina soltanto se ritenuta necessaria
+
+Esecuzione di un processo può richiedere swap-in del processo
+    • pager: gestisce i trasferimenti di singole pagine
+    • swapper: gestisce i trasferimenti di INTERI processi 
+Prima di eseguire il caricamento (o swap-in) di un processo, pager può prevedere le pagine di cui (probabilmente) il processo avrà bisogno inizialmente -> caricamento
+
+Quindi, in generale, una pagina dello spazio logico di un processo:
+    • può essere allocata in memoria centrale
+    • può essere in memoria secondaria
+-> Come distinguere i due casi?
+Ogni elemento della tabella delle pagine contiene 1 bit di validità, il cui valore indica:
+    • valore 1: la pagina è presente in memoria centrale (valore 1)
+    • valore 0: la pagina è in memoria secondaria oppure è invalida, cioè non appartiene allo spazio logico del processo
+Nella traduzione di ogni indirizzo si consulta la tabella delle pagine: 
+    -> se il bit di validità della pagina richiesta è 0 -> interruzione al SO (page fault)
+
+TRATTAMENTO PAGE FAULT
+Quando il kernel del SO riceve l’interruzione dovuta al page fault:
+    0. Salvataggio del contesto di esecuzione del processo (registri, stato, tabella delle pagine)
+    1. Verifica del motivo del page fault (mediante una tabella interna al kernel)
+        • riferimento illegale (violazione delle politiche di protezione) terminazione del processo
+        • riferimento legale: la pagina è in memoria secondaria
+    2. Copia della pagina in un frame libero
+    3. Aggiornamento della tabella delle pagine con l'indirizzo del frame fisico e aggiustando il bit di validità
+    4. Ripristino del contesto del processo: esecuzione dell’istruzione interrotta dal page fault
+
+PAGINAZIONE SU RICHIESTA: SOVRALLOCAZIONE
+In seguito a un page fault, se è necessario caricare una pagina in memoria centrale, può darsi che non ci siano frame liberi -> sovrallocazione!
+Soluzione:
+sostituzione di una pagina P_vitt(« vittima») allocata in memoria con la pagina P_new da caricare:
+    1. Individuazione della vittima P_vitt
+    2. Salvataggio di P_vitt su disco
+    3. Caricamento di P_new nel frame liberato
+    4. Aggiornamento tabelle
+    5. Ripresa del processo
+
+In generale, la sostituzione di una pagina puòrichiedere 2 trasferimenti da/verso il disco:
+    1. per scaricare la vittima (sul disco)
+    2. per caricare la pagina nuova (dal disco)
+E’ possibile però, che la vittima non sia stata modificata rispetto alla copia residente sul disco; ad esempio:
+    • pagine di codice (read-only)
+    • pagine contenenti dati che non sono stati modificati durante la permanenza in memoria (const)
+In questo caso la copia della vittima sul disco può essere evitata -> introduzione nella tabella delle pagine del bit di modifica (dirty bit)
+
+DIRTY BIT
+Per rendere più efficiente il trattamento del page fault in caso di sovrallocazione
+    • si introduce in ogni elemento della tabella delle pagine un bit di modifica (dirty bit)
+    • se settato, la pagina ha subìto almeno un aggiornamento da quando è caricata in memoria
+    • se a 0, la pagina non è stata modificata
+    • l’algoritmo di sostituzione può esaminare il bit di modifica della vittima:
+    • esegue swap-out della vittima solo se il dirty bit è settato
+
+ALGORITMI DI SOSTITUZIONE DELLA PAGINA VITTIMA
+La finalità di ogni algoritmo di sostituzione è sostituire quelle pagine la cui probabilità di essere accedute a BREVE TERMINE è bassa.
+
+Algoritmi:
+    • LFU (Least Frequently Used): sostituita la pagina che è stata usata meno frequentemente (in un intervallo di tempo prefissato)
+        - è necessario associare un contatore degli accessi ad ogni pagina (sempre nella tabella delle pagine)
+        - la vittima è quella con minimo valore del contatore
+    • FIFO: sostituita la pagina che è da più tempo caricata in memoria (indipendentemente dal suo uso)
+        - necessario memorizzare la cronologia dei caricamenti in memoria:
+            -> timestamping o gestione di una coda in cui ogni elemento rappresenta una pagina caricata in memoria
+    • LRU (Least Recently Used): viene sostituita la pagina che è stata usata meno recentemente (di solito preferibile per principio di località)
+        - è necessario registrare la sequenza degli accessi alle pagine in memoria
+            -> timestamping, oppure uso uno stack in cui il top è l'ultima pagina acceduta e il bottom è la LRU
+        - overhead, dovuto all’aggiornamento della sequenza degli accessi per ogni accesso in memoria
+(LINUX usa una versione semplificata di LRU)
+
+PAGE FETCHING, THRASHING & WORKING SET
+La paginazione su domanda pura, carica una pagina soltanto se strettamente necessaria:
+    -> molti page fault
+    -> possibilità di trashing: il sistema impiega più tempo per la paginazione che per l’esecuzione.
+Per contrastare il thrashing: tecniche di gestione della memoria che si basano su PRE-PAGINAZIONE:
+    -> si PREVEDE il set di pagine di cui il processo da caricare ha bisogno per la prossima fase di esecuzione: “working set”
+        -> il working set può essere individuato in base a criteri di LOCALITÀ TEMPORALE
+
+LOCALITÀ DEI PROGRAMMI
+Si è osservato che un processo, in una certa fase di esecuzione:
+    • usa solo un sottoinsieme relativamente piccolo delle sue pagine logiche
+    • il sottoinsieme delle pagine effettivamente utilizzate varia lentamente nel tempo
+    • Località spaziale: alta probabilità di accedere a locazioni vicine (nello spazio logico/virtuale) a locazioni appena accedute (ad esempio,
+      elementi di un vettore, codice sequenziale, ...)
+    • Località temporale alta probabilità di accesso a locazioni accedute di recente (ad esempio cicli) -> vedi algoritmo LRU
+
+PRE-PAGINAZIONE CON WORKING SET
+Caricamento di un processo consiste nel caricamento di un working set iniziale.
+    • SO mantiene working set di ogni processo aggiornandolo dinamicamente, in base al principio di località temporale:
+        - all’istante t vengono mantenute le pagine usate dal processo nell’ultima finestra D(t)
+        - le altre pagine (esterne a D(t)) possono essere sostituite
+Vantaggio: riduzione del numero di page fault
+
+ESEMPIO DI GESTIONE DELLA MEMORIA IN UNIX E LINUX (SKIP, guarda le slide che è un buon riassunto)

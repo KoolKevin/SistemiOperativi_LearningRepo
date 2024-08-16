@@ -1,0 +1,81 @@
+In un sistema multiprogrammato l’esecuzione concorrente dei processi determina la necessità di mantenere più processi in memoria centrale. Il SO deve quindi 
+gestire la memoria in modo da consentire la presenza contemporanea di più processi.
+
+Aspetti importanti da considerare:
+    • Velocità di accesso
+    • Grado di multiprogrammazione
+    • Utilizzo della memoria
+    • Protezione delle aree di memoria assegnate a processi/kernel
+
+A livello hw ogni sistema è equipaggiato con un UNICO spazio di memoria accessibile direttamente da CPU e dispositivi.
+COMPITI DEL SO
+    • Allocare memoria ai processi
+    • Deallocare memoria
+    • Protezione: separare gli spazi di indirizzi associati ai diversi processi
+    • Binding: realizzare i collegamenti tra gli indirizzi logici specificati dai processi e le corrispondenti locazioni nella memoria fisica
+    • Memoria virtuale: gestire spazi di indirizzi logici di dimensioni superiori allo spazio fisico
+
+ACCESSO ALLA MEMORIA
+La memoria centrale può essere vista come vettore di celle, ognuna univocamente individuata da un indirizzo con due operazioni fondamentali: load e store  di dati/istruzioni
+E’ possibile riferire una cella in memoria tramite:
+    • un indirizzo Fisico
+    • un indirizzo Logico
+
+SPAZIO DI INDIRIZZAMENTO
+Ogni processo “vede” un proprio spazio di indirizzamento logico [0,max] che contiene il codice e i dati necessari per la sua esecuzione.
+Lo spazio di indirizzamento logico di un processo può essere suddiviso nelle 4 aree già note   0           .....        MAX
+                                                                                               [TEXT | DATA | STACK | HEAP]  
+In genere, un programma in forma ESEGUIBILE, contiene riferimenti allo spazio LOGICO di indirizzamento -> indirizzi logici. Durante l'esecuzione però, lo spazio
+di indirizzamento logico del processo deve essere ALLOCATO nella memoria FISICA. (per esempio, con allocazione contigua: 0...MAX -> BASE...BASE+MAX)
+
+INDIRIZZI LOGICI, FISICE E SIMBOLICI
+Indirizzi:
+    • Fisici: riferimenti assoluti delle celle in memoria a livello HW
+    • Logici: riferimenti a celle nello spazio logico di indirizzamento del processo. Per consentire l’esecuzione, é necessario tradurre ogni indirizzo logico
+      nell’indirizzo fisico corrispondente (Binding degli indirizzi)
+    • Indirizzi simbolici: ogni programma in forma sorgente contiene indirizzi simbolici, ovvero rierimenti a dati/istruzioni mediante nomi simbolici 
+      (es: nomi di variabili, funzioni ecc.). Il processo di COMPILAZIONE trasforma ogni indirizzo simbolico in un indirizzo logico
+
+DEF | ESEGUIBILE RILOCABILE
+La rilocabilità dell'eseguibile è un concetto che riguarda la capacità dell'eseguibile di essere caricato in diverse posizioni di memoria senza che sia necessario modificare
+il codice o i dati interni del programma. Questa capacità è resa possibile dall'uso di indirizzi LOGICI (o virtuali) all'interno dell'eseguibile, che possono essere "mappati"
+a indirizzi fisici reali durante il CARICAMENTO in memoria.
+
+FASI DI SVILUPPO DI UN PROGRAMMA (guarda immagine sulle slide)
+    • Compilazione: trasforma il codice sorgente (che contiene indirizzi simbolici) in file oggetto, file che contengono la traduzione del sorgente in codice macchina
+      con dentro però dei riferimenti irrisolti(variabili globali/funzioni dichiarate ma non definite) che verranno gestiti dal linker.
+    • Linking: prende in ingresso dei file oggetto e li combina assieme con le librerie di sistema per ottenere un ESEGUIBILE RILOCABILE (contiene indirizzi logici) 
+        - Linking statico: Il linker combina i file oggetto e le librerie statiche risolvendo i riferimenti irrisolti e generando così un eseguibile.
+          (Veramente, questo eseguibile può essere rilocabile o non rilocabile, a seconda delle specifiche. Nei sistemi moderni lo è)
+        - Linking dinamico: In alcuni casi, il linker non incorpora tutte le librerie nel file eseguibile. Invece, crea riferimenti a librerie dinamiche
+          (come le .dll su Windows o le .so su Linux) che verranno risolti al momento dell'esecuzione (quando vengono usate nel programma).    
+    • Caricamento: in questa fase l'eseguibile rilocabile viene caricato in memoria dal loader per poi (eventualmente, venire combinato con LIBRERIE A CARICAMENTO DINAMICO
+      ed) ottenere un eseguibile finale (contiene indirizzi fisici).
+
+Durante questo processo, ad ogni indirizzo logico/simbolico viene fatto corrispondere un indirizzo fisico: l’associazione tra indirizzi relativi e indirizzi assoluti viene
+detta BINDING. Il Binding può essere effettuato:
+    • staticamente
+        - a tempo di compilazione. Il compilatore genera degli indirizzi assoluti (raramente usato al giorno d'oggi; esempio: file .com DOS)
+        - a tempo di caricamento. Il compilatore genera degli indirizzi relativi che vengono convertiti in indirizzi assoluti dal loader (codice rilocabile)
+    • dinamicamente
+        - a tempo di esecuzione. Durante l’esecuzione, lo spazio di indirizzamento di un processo (o parti di esso) può essere spostato (riallocato) nella memoria fisica.
+
+COLLEGAMENTO TRA BINDING E LINKING
+    • Il linking statico tende a essere associato al binding statico a tempo di caricamento, poiché tutto viene risolto e fissato prima che il programma inizi a girare.
+    • Il linking dinamico tende a utilizzare il binding dinamico a tempo di esecuzione, perché gli indirizzi delle librerie dinamiche non sono risolti fino
+      a quando non vengono effettivamente chiamate e quindi caricate in memoria.
+Riassunto
+    • Binding Statico/Dinamico: Si riferisce al momento in cui vengono risolti e fissati gli indirizzi di memoria per un programma 
+      (a tempo di compilazione, caricamento o esecuzione).
+    • Linking Statico/Dinamico: Si riferisce al momento in cui i moduli e le librerie sono collegati a un programma, e se questo processo avviene prima dell'esecuzione
+      o dinamicamente durante l'esecuzione 
+
+CARICAMENTO/COLLEGAMENTO DINAMICO
+    -> Obiettivo: ottimizzazione della memoria
+Caricamento dinamico:
+    • In alcuni casi è possibile caricare in memoria una funzione/procedura a runtime solo quando avviene la chiamata
+    • loader di collegamento rilocabile: carica e collega dinamicamente la funzione al programma che la usa
+    • la funzione può essere usata da più processi simultaneamente. Problema di visibilità!
+      -> compito del SO è concedere/controllare:
+        - l’accesso di un processo allo spazio di un altro processo
+        - l’accesso di più processi agli stessi indirizzi

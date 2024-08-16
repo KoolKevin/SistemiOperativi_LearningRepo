@@ -1,0 +1,237 @@
+COME VENGONO ALLOCATI CODICE E DATI DEI PROCESSI IN MEMORIA CENTRALE?
+Varie tecniche:
+    • Allocazione Contigua
+        - a partizione singola
+        - a partizioni multiple
+    • Allocazione non contigua:
+        - paginazione
+        - segmentazione
+
+--- ALLOCAZIONE CONTIGUA
+
+ALLOCAZIONE CONTIGUA A PARTIZIONE SINGOLA
+Primo approccio molto semplificato: la parte di memoria disponibile per l’allocazione dei processi di utente non è partizionata, cioè un solo processo alla volta può essere
+allocato in memoria -> NON c’è multiprogrammazione
+Di solito:
+    • SO risiede nella memoria bassa [0, max]
+    • Necessità di proteggere codice e dati di SO da accessi di processi utente
+        -> uso del registro di rilocazione (RL=max+1) per garantire la correttezza degli accessi (guarda immagine slide 14).
+
+Più nel dettaglio, si utilizzano due registri della MemoryManagementUnit(MMU), un componente HW, strettamente legato alla CPU responsabile della traduzione degli indirizzi logici
+in indirizzi fisici:
+    • Registro Limite (Limit Register):
+        - Funzione: Memorizza la dimensione della memoria allocata al processo
+        - Scopo: Assicura che il processo non possa accedere a un indirizzo al di fuori dell'area di memoria a lui riservata. Se l'indirizzo logico supera il valore
+          del registro limite significa che sto eccedendo l'area di memoria che mi è stata assegnata e quindi viene generata una trap.
+    • Registro di Rilocazione (Base Register)
+        - Funzione: Contiene l'indirizzo di partenza della memoria fisica assegnata a un processo.
+        - Scopo: Ogni indirizzo logico generato dal processo utente viene sommato al valore del registro di rilocazione per ottenere l'indirizzo fisico effettivo (+max).
+          Questo garantisce che il processo non possa accedere a porzioni di memoria assegnate al sistema operativo.
+
+ALLOCAZIONE CONTIGUA A PARTIZIONI MULTIPLE
+In questo caso c'è Multiprogrammazione!
+
+Partizioni multiple: ad ogni processo caricato viene associata un’area di memoria distinta (partizione).
+Due casi:
+    • Partizioni Fisse (MFT, Multiprogramming with Fixed number of Tasks)
+      La memoria fisica disponibile per l’allocazione dei processi è suddivisa a priori in un numero prefissato di partizioni. La dimensione di ogni partizione 
+      è fissata a priori. Quando un processo viene caricato, il SO cerca una partizione libera di dimensione sufficiente ad accogliere il suo spazio di indirizzamento.
+      Problemi:
+        - frammentazione interna; sottoutilizzo della partizione siccome un processo potrebbe non consumare tutta la memoria della partizione e lasciarne poca.
+        - grado di multiprogrammazione limitato al numero di partizioni
+        - dim. massima dello spazio di indirizzamento di un processo limitata da dim. della partizione più estesa
+    • Partizioni Variabili (MVT, Multiprogramming with Variable number of Tasks)
+      Ogni partizione è creata dinamicamente e dimensionata in base alla dimensione del processo da allocare. Quando un processo viene caricato, SO cerca un’area
+      sufficientemente grande per allocarvi dinamicamente la partizione associata
+      Vantaggi (rispetto a MFT):
+        - elimina frammentazione interna (ogni partizione è della esatta dimensione del processo)
+        - grado di multiprogrammazione variabile
+        - dimensione massima dello spazio di indirizzamento di ogni processo limitata dalla dim. dello spazio fisico
+      Problemi:
+        - scelta dell’area in cui allocare; varie politiche possibili. Es: best fit, worst fit, first fit, ...
+        - frammentazione esterna. Man mano che si allocano nuove partizioni, la memoria libera è sempre più frammentata
+            -> necessità di compattazione periodica
+                -> altro problema, possibile crescita dinamica dei processi (si pensi a malloc) -> mantenimento dello spazio di 
+                
+In questo caso c'è Multiprogrammazione! -> più processi utente in memoria -> necessità di proteggere codice e dati di ogni processo e non solo del SO!
+
+Anche in questo caso, protezione realizzata a livello HW mediante i registri della MMU(guarda slide):
+    • registro di rilocazione RR
+    • registro limite RL
+Ad ogni processo è associata (memorizzata dentro al PCB) una coppia di valori <VRR, VRL> (Value of RR, Value of RL). Quando un processo P viene schedulato, il dispatcher
+carica RR e RL (della MMU) con i valori associati al processo <VRR, VRL>.
+Esattamente come prima, se l'indirizzo logico di un processo eccede RL (area di memoria che mi è stata assegnata) viene generata una trap (non posso eccedere),
+successivamente per ottenere l'indirizzo fisico, si somma a quello logico il valore di RR (non posso eccedere in diffetto). 
+In questo modo, si ottiene che ogni processo ha quindi il suo segmentino di memoria CONTIGUO che non può eccedere.    
+
+--- ALLOCAZIONE NON CONTIGUA
+
+Il problema principale è la FRAMMENTAZIONE ESTERNA. Allocazione non contigua risolve con PAGINAZIONE.
+    • eliminazione frammentazione esterna
+    • forte riduzione di frammentazione interna
+
+Idea di base: partizionamento spazio fisico di memoria in pagine (frame) di dim costante e limitata (ad es. 4KB) sulle quali mappare porzioni dei processi da allocare. 
+In questo modo si ha frammentazione interna solo per l'ultima porzione di memoria necessaria al processo che non occuperà per intero una pagina.
+
+PAGINAZIONE
+    • Spazio fisico: insieme di frame di dim D_f costante prefissata (sparse in memoria in un qualsiasi ordine)
+    • Spazio logico: insieme di pagine di dim uguale a D_f (contigue per i processi)
+Ogni pagina logica di un processo viene mappata su una pagina fisica in memoria centrale.
+
+Vantaggi
+    • Pagine logiche contigue possono essere allocate su pagine fisiche non contigue: NON c’è frammentazione esterna
+    • Le pagine sono di dimensione limitata: per ogni processo la frammentazione interna è limitata dalla dimensione del frame
+    • È possibile caricare in memoria un SOTTOINSIEME delle pagine logiche di un processo (vedi memoria virtuale)
+
+SUPPORTO HW A PAGINAZIONE
+Struttura dell’indirizzo LOGICO:
+    • p numero di pagina logica
+    • d offset della cella rispetto all’inizio della pagina
+Hp: indirizzi logici di m bit ( n bit per offset, e m-n per la pagina)
+    • dim massima dello spazio logico di indirizzamento -> 2^m
+    • dim della pagina -> 2^n
+    • numero di pagine -> 2^(m-n)
+    • Es: m=32, n=12 -> pagine 4K e 2^20=1M pagine indirizzabili
+
+Struttura dell’indirizzo FISICO:
+    • f numero di frame(pagina fisica)
+    • d offset della cella rispetto all’inizio del frame
+Binding tra indirizzi logici e fisici può essere realizzato mediante una TABELLA DELLE PAGINE (associata al processo): a ogni pagina logica associa la pagina fisica
+verso la quale è realizzato il mapping. L’offset è invariato.
+
+REALIZZAZIONE DELLA TABELLA DELLE PAGINE
+Problemi da affrontare:
+    • tabella può essere molto grande (nell'esempio precedente 2^20 entry)
+    • traduzione (ind.logico -> ind. fisico) deve essere il più veloce possibile
+Varie soluzioni:
+    1. Su registri di CPU
+        • accesso veloce
+        • cambio di contesto pesante
+        • dimensioni limitate della tabella
+    2. In memoria centrale:
+        • registro PageTableBaseRegister (PTBR) memorizza collocazione tabella in memoria:
+            - Il PTBR contiene l'indirizzo base della tabella delle pagine del processo corrente. Quando un processo è attivo, il PTBR viene caricato con l'indirizzo
+              della tabella delle pagine di quel processo.
+            - Quando la CPU deve tradurre un indirizzo logico in un indirizzo fisico, usa il numero di pagina logica (p) per determinare l'offset nella tabella delle pagine,
+              e con l'aiuto del PTBR accede alla voce corretta nella tabella. Una volta trovato il numero di frame fisico corrispondente (f), l'offset (d) rimane invariato
+              e viene utilizzato per formare l'indirizzo fisico finale.
+            - Problema: 2 accessi in memoria per ogni operazione load/store.
+              In questa configurazione, per accedere ad un indirizzo fisico, la CPU deve prima accedere alla memoria centrale per leggere l'entry corrispondente nella
+              tabella delle pagine (tramite il PTBR) e poi deve accedere nuovamente alla memoria per leggere o scrivere i dati effettivi nel frame.
+              Questo significa che ogni operazione di memoria richiede due accessi: uno per la traduzione e uno per l'operazione vera e propria. Questo può rallentare
+              significativamente le prestazioni del sistema.
+    3. Memoria centrale + cache: (Translation Look-aside Buffers, TLB) per velocizzare l’accesso
+
+TRANSLATION LOOK-ASIDE BUFFERS(TLB)
+La tabella delle pagine è generalmente allocata in memoria centrale. Tuttavia, una parte (di solito, quella relativa alle pagine accedute più di frequente o più di recente)
+è copiata anche in cache: TLB.
+Se la coppia (p,f) è già presente in cache l’accesso è veloce; altrimenti SO deve trasferire la coppia richiesta dalla tabella delle pagine (in memoria centrale) in TLB.
+
+Gestione TLB
+    • TLB inizialmente vuoto
+    • mentre l’esecuzione procede, viene gradualmente riempito con indirizzi di pagine già accedute
+        -> HIT-RATIO: percentuale media di volte in cui una pagina viene trovata in TLB. Dipende da dimensione del TLB e da come viene gestita (Intel486: 98%).
+
+PAGINAZIONE A PIÙ LIVELLI (guarda slide e fai prima)
+Lo spazio logico di indirizzamento di un processo può essere molto esteso. Ad esempio:
+    se indirizzi di 32 bit -> spazio logico di 4GB
+    se dimensione pagina 4KB(2^12) -> la tabella delle pagine dovrebbe contenere 2^32/2^12 elementi -> 2^20 elementi (circa 1M)
+Elevato numero di pagine -> tabella delle pagine di grandi dimensioni -> stessi problemi dell'allocazione contigua!
+
+Soluzione -> Paginazione a più livelli: allocazione non contigua anche della tabella delle pagine -> si applica ancora la tecnica di paginazione alla tabella della pagine
+
+ESEMPIO PAGINAZIONE A DUE LIVELLI
+Vengono utilizzati due livelli di tabelle delle pagine. Primo livello (tabella esterna), contiene gli indirizzi delle tabelle delle pagine collocate al secondo livello
+(tabelle interne) che conterranno l'associazione con il frame fisico.
+
+Struttura dell’indirizzo logico:
+    • p1 indice di «pagina» nella tabella esterna
+    • p2 offset nella tabella interna
+    • d offset cella all’interno della pagina fisica
+Esempio: indirizzi di 32 bit, pagine di 4K (12 bit per d), indirizzi p1 e p2 di 10 bit:
+    -> 1K «pagine» di primo livello
+        -> 1K tabelle di secondo livello (ognuna di 1K entry)
+
+Vantaggi
+    • possibilità di indirizzare spazi logici di dimensioni elevate riducendo i problemi di allocazione delle tabelle
+    • possibilità di mantenere in memoria soltanto le tabelle interne (secondo livello) che servono 
+Svantaggio
+    • tempo di accesso più elevato: per tradurre un indirizzo logico sono necessari più accessi in memoria (ad esempio, 2 livelli di paginazione -> 2 accessi)
+        -> uso di TLB
+
+TABELLA DELLE PAGINE INVERTITA
+Per limitare l’occupazione di memoria, in alcuni SO si usa un’unica struttura dati globale che ha un elemento per ogni frame: tabella delle pagine invertita.
+Ogni elemento della tabella delle pagine invertita rappresenta un frame (indirizzo pari alla posizione nella tabella) e, in caso di frame allocato, contiene:
+    • pid: identificatore del processo a cui è assegnato il frame
+    • p: numero di pagina logica
+La struttura dell’indirizzo logico è, quindi: [pid | p | d]; con d l’offset all’interno della pagina.
+
+Per tradurre un indirizzo logico <pid, p, d>: Ricerca nella tabella dell’elemento che contiene la coppia (pid, p) 
+    -> l’indice dell’elemento trovato rappresenta il numero del frame allocato alla pagina logica p.
+Problemi:
+    • tempo di ricerca nella tabella invertita
+    • difficoltà di realizzazione della condivisione di pagine tra processi (condivisione di memoria, rientranza del codice). 
+    Come associare un frame a più pagine logiche di processi diversi?
+
+SEGMENTAZIONE
+La segmentazione è una tecnica di allocazione della memoria centrale che si basa sul partizionamento dello spazio LOGICO degli indirizzi di un processo in parti (segmenti),
+ognuna caratterizzata da nome e lunghezza propri.
+    • Divisione semantica, ad esempio:
+        - codice
+        - dati
+        - stack 
+        - heap
+    • Non è stabilito un ordine tra i segmenti
+    • Ogni segmento è allocato in memoria in modo CONTIGUO
+    • Ad ogni segmento è possibile applicare diritti di accesso specifici (es: codice -> sola lettura)
+    • Ad ogni segmento il SO associa un intero attraverso il quale lo si può riferire
+
+STRUTTURA DEGLI INDIRIZZI LOGICI
+ogni indirizzo è costituito dalla coppia <segmento, offset>
+    • segmento: identificatore numerico che individua il segmento nel sistema
+    • offset: posizione cella all’interno del segmento
+
+SUPPORTO HW ALLA SEGMENTAZIONE (guarda immagine)
+Tabella dei Segmenti: ha una entry per ogni segmento, che ne descrive l’allocazione in memoria FISICA mediante la coppia <base, limite>
+    • base: indirizzo prima cella del segmento nello spazio fisico
+    • limite: indica la dimensione del segmento
+-> La tabella dei segmenti è indirizzata dal registro SegmentTableBaseRegister(STBR)
+
+REALIZZAZIONE DELLA TABELLA DEI SEGMENTI
+Tabella globale: possibilità di dimensioni elevate -> 1 tabella per ogni processo
+Realizzazione (come prima):
+    • su registri di CPU
+    • In memoria, mediante registri base (Segment Table Base Register, STBR) e limite (Segment Table Length Register,STLR)
+    • Memoria + cache (solo l’insieme dei segmenti usati più recentemente)
+
+La segmentazione può essere vista come un'estensione della tecnica di allocazione contigua a partizioni variabili.
+    • partizioni variabili: 1 partizione per processo
+    • segmentazione: più partizioni (segmenti) per processo
+Problema principale:
+    • come nel caso delle partizioni variabili, frammentazione esterna
+Soluzione:
+    • allocazione dei segmenti con tecniche
+        - best fit
+        - worst fit
+        - ...
+    • compattazione
+
+SEGMENTAZIONE PAGINATA
+Segmentazione e paginazione possono essere combinate (ad esempio Intel x86):
+    • spazio logico segmentato (specialmente per motivi di protezione)
+    • ogni segmento suddiviso in pagine
+Vantaggi:
+    • eliminazione della frammentazione esterna
+    • non necessario mantenere in memoria l’intero segmento, ma è possibile caricare soltanto le pagine necessarie (vedi memoria virtuale)
+Strutture dati:
+    • tabella dei segmenti (contiene le pagine logiche del segmento)
+    • una tabella delle pagine per ogni segmento (contengono l'associazione tra pagine logiche e fisiche)
+        - Ogni elemento della tabella dei segmenti contiene l’indirizzo della tabella delle pagine di quel segmento
+
+Questa è la tecnica di allocazione della memoria centrale usata nei moderni sistemi operativi. Ad esempio, in Linux:
+    • Vari tipi di segmento:
+        - code (kernel, user)
+        - data (kernel, user)
+        - task state segments (registri dei processi per il cambio di contesto)
+        - ...
+    • I segmenti sono paginati con paginazione a tre livelli.
