@@ -1,0 +1,209 @@
+//PURTROPPO QUA PER CAPIRCI QUALCOSA C'È DA GUARDARE LE IMMAGINI 
+
+--- COMPITI DEL SOTTOSISTEMA DI I/O
+    1. Nascondere al programmatore i dettagli delle interfacce hardware (controllori) dei dispositivi;
+    2. Omogeneizzare la gestione di dispositivi diversi;
+        TIPOLOGIE DI DISPOSITIVI
+        - Dispositivi a carattere (es. tastiera, stampante, mouse,…)
+        - Dispositivi a blocchi (es. dischi, nastri, ..)
+        - Dispositivi speciali (es. timer)
+    3. Gestire i malfunzionamenti che si possono verificare durante un trasferimento di dati;
+        TIPOLOGIE DI GUASTI
+        - Guasti transitori (es. disturbi elettromagnetici durante un trasferimento dati);
+        - Guasti permanenti (es. rottura di una testina di lettura/scrittura di un disco).
+        - Eventi eccezionali (es. mancanza di carta sulla stampante, End-Of-File );
+    4. Definire lo spazio dei nomi (naming) con cui vengono identificati i dispositivi;
+        - Uso di nomi simbolici da parte dell’utente (I/O API: Input/Output Application Programming Interface);
+        - Uso di indentificatori unici (es: valori numerici interi) all’interno del sistema per identificare in modo univoco i dispositivi;
+        - Spesso: uniformità col meccanismo di naming del file-system.
+    5. Garantire la corretta sincronizzazione tra ogni processo applicativo che ha attivato un trasferimento dati e l’attività del dispositivo.
+        - Gestione SINCRONA dei trasferimenti: un processo applicativo attiva un dispositivo e si blocca fino al termine del trasferimento;
+        - Gestione ASINCRONA dei trasferimenti: un processo applicativo attiva un dispositivo e prosegue senza bloccarsi;
+        - Necessità di gestire la “BUFFERIZZAZIONE” dei dati.
+
+--- ARCHITETTURA DEL SOTTOSISTEMA DI I/O (tante immagini, guarda slide)
+
+Schema generale:
+
+    Interfaccia applicativa: I/O API
+    --------------------------------
+    Parte del sottosistema di I/O
+    indipendente dai dispositivi
+    --------------------------------
+    Interfaccia device-independent
+    --------------------------------
+    Parte del sottosistema di I/O
+    dipendente dai dispositivi:
+    -> device drivers
+    --------------------------------
+               Hardware
+
+Più nel dettaglio:
+• ARCHITETTURA DEL SOTTOSISTEMA DI I/O | PARTE INDIPENDENTE DAI DISPOSITIVI
+
+    Processi applicativi                                |
+    --------------------------------------------------- |       -> Livello Applicativo
+    Librerie                                            |      
+    ------------------------------------------------------------------------------------------------------
+    Interfaccia applicativa I/O API                     |
+    --------------------------------------------------- |       -> Livello SO
+    Parte I/O indipendent                               |
+
+• ARCHITETTURA DEL SOTTOSISTEMA DI I/O | PARTE DIPENDENTE DAI DISPOSITIVI
+
+    Disp. di rete | Disp. a blocchi | Disp. a carattere |
+    --------------------------------------------------- |
+    Parte dipendente dai dispositivi                    |       -> Livello SO
+    -> device drivers                                   |
+    -> Interrupt handlers                               |
+    ------------------------------------------------------------------------------------------------------
+    Interfaccia di accesso ai dispositivi               |
+    --------------------------------------------------- |       -> Livello HW
+    Controllori dei dispositivi                         |
+
+
+LIVELLO INDIPENDENTE DAI DISPOSITIVI, FUNZIONI:
+• Naming
+• Buffering
+    - Per ogni operazione di I/O il sistema operativo riserva un'area di memoria "tampone" (buffer), per contenere i dati oggetto del trasferimento.
+    - Motivazioni:
+        -> differenza di velocita` tra processo e periferica: disaccoppiamento!
+        -> quantita` di dati da trasferire (es. dispositivi a blocchi): il processo puo` richiedere il trasferimento di una quantita` di informazioni inferiore
+           a quella del blocco, la periferica tuttavia opera solo con blocchi interi.
+           In caso di scrittura SO aspetta che il buffer raggiunga la dimensione di un blocco prima di scrivere sulla periferica (oppure flush con del padding).
+           In caso di lettura viene caricato un intero blocco nel buffer, il SO copia nel processo (tipicamente dentro ad un altro buffer, u-buff) i dati richiesti.  
+• Gestione malfunzionamenti
+    - Tipi di eventi anomali:
+        -> Eventi generati a questo livello (es. tentativo di accesso a un dispositivo inesistente).
+        -> Eventi propagati dal livello inferiore (es. guasto HW temporaneo o permanente);
+    - Gestione degli eventi anomali:
+        -> Risoluzione del problema (mascheramento dell’evento anomalo);
+        -> Gestione parziale e propagazione a livello applicativo.
+• Allocazione dei dispositivi ai processi applicativi
+    - Dispositivi condivisi da utilizzare in mutua esclusione;
+    - Dispositivi dedicati ad un solo processo (server) a cui i processi client possono inviare messaggi di richiesta di servizio;
+    - Tecniche di spooling (dispositivi virtuali).
+
+LIVELLO DIPENDENTE DAI DISPOSITIVI, FUNZIONI:
+• fornire i gestori dei dispositivi (device drivers)
+• offrire al livello superiore l’insieme delle funzioni di accesso ai dispositivi (tramite un’interfaccia “device-independent”).
+  Ad esempio, dispositivo di INPUT:
+    N=_read(disp, buffer, nbytes);   -> con 'disp' = nome unico del dispositivo e 'buffer' = Buffer di sistema
+
+INTERAZIONE DISPOSITIVO-CPU (guarda immagine per Schema semplificato )
+CPU e controllore del dispositivo sono collegati attraverso i bus di sistema, la comunicazione tra cpu e dispositivo è in realtà tra CPU e controllore.
+In particolare, il controllore ha 3 registri che vengono usati durante la comunicazione:
+    • Registro di controllo: viene scritto dalla CPU per controllare la periferica; ogni comando da impartire alla periferica viene scritto, tramite il driver,
+      nel registro di controllo. La periferica viene attivata tramite il settaggio del bit di start. Destinatario di questo registro è la periferica.
+      Oltre al bit di start, questo registro possiede anche un bit per l'abilitazione delle interruzione.
+    • Registro di stato: la periferica usa il registro di stato per comunicare alla CPU l’esito di ogni comando eseguito ed, eventualmente, per notificare eventuali errori occorsi.
+      Il termine del comando viene notificato tramite il bit di flag. Destinatario di questo registro è la CPU.
+      Oltre al bit di flag, questo registro possiede anche un bit che viene settato quando ci sono stati degli errori.
+    • Registro Dati: viene utilizzato per il trasferimento dei dati letti/scritti dal dispositivo. Questo registro abilita una comunicazione bidirezionale.
+
+--- GESTORE DI UN DISPOSITIVO DI I/O
+
+Nella gestione di ogni dispositivo, la sincronizzazione tra CPU e periferica può avvenire secondo 2 modelli alternativi(GUARDA IMMAGINI!!!):
+    • Gestione a controllo di programma (o polling)
+        - In questo modello il dispositivo ha 3 stati:
+            1. attende l’invio di un comando tramite il registro di controllo; il disp. rimane in questo stato finche il bit di start=0.
+            2. una volta che start=1, il disp. esegue il comando e dopo aver terminato imposta il bit di flag=1
+            3. segnala, tramite il registro di stato, la fine del comando
+        - Il processo applicativo (sulla CPU):
+            1. prepara un comando
+            2. invia il comando, una volta inviato imposta il bit di start=1
+            3. attende la fine del comando; il processo rimane in questo stato finchè flag=0 (NB: ATTESA ATTIVA DEL PROCESSO!)
+            4. verifica l'esito dell'ultimo comando eseguito. Successivamente può procedere al prossimo oppure terminare.
+    • Gestione basata su interruzioni
+        - Lo schema “a controllo di programma” non è adatto per sistemi multiprogrammati, a causa dei cicli di attesa attiva.
+        - Per evitare l’attesa attiva:
+            -> Riservare, per ogni dispositivo un semaforo: semaphore dato_disponibile=0;
+            -> Attivare il dispositivo abilitandolo a interrompere (ponendo nel registro di controllo il bit di abilitazione a 1).
+        - In questo caso, il processo applicativo (sulla CPU):
+            1. prepara un comando
+            2. invia il comando, una volta inviato imposta il bit di start=1
+            3. si sospende a causa del semaforo (non c'è più attesa attiva); 
+                3.1 durante la sospensione del processo viene effettuato un CAMBIO DI CONTESTO, per fare andare avanti altri processi. In questo modo si usa la CPU.
+                3.2 dopo un po' di tempo la periferica terminerà di elaborare il comando e manderà un interrupt alla CPU
+                3.3 dentro all'interrupt handler ci sarà sicuramente una istruzione per riattivare il semafore e quindi riattivare il processo 
+            4. verifica l'esito dell'ultimo comando eseguito. Successivamente può procedere al prossimo oppure terminare.
+
+ASTRAZIONE DI UN DISPOSITIVO
+Definita dal Device Driver:
+    • i processi applicativi vedono solo l'interfaccia dalle funzioni di sistema _read() e _write()
+    • il dispositivo fisico invoca indirettamente tramite un interrupt l'interrupt_handler (inth) definito dentro al device driver
+    • per gestire le operazioni di I/O con il dispositivo _read(), _write() e inth sfruttano tutti il DESCRITTORE DEL DISPOSITIVO, una struttura dati contenuta all'interno
+      del device driver. 
+DESCRITTORE DI UN DISPOSITIVO
+contiene:
+• indirizzo registro di controllo
+• indirizzo registro di stato
+• indirizzo registro dati
+• SEMAFORO DATO_DISPONIBILE
+• contatore dati da trasferire
+• puntatore al buffer in memoria
+• esito del trasferimento
+
+DRIVER DI UN DISPOSITIVO
+Detto anche device driver, è un componente software che funge da intermediario tra il sistema operativo e l'hardware del dispositivo.
+Il driver di un dispositivo è responsabile di tradurre le istruzioni generiche del sistema operativo in comandi specifici che il dispositivo hardware può comprendere
+e di gestire la comunicazione tra il sistema e il dispositivo. Nel nostro caso semplificato, dentro ad un device driver sono presenti le funzioni per la gestione dell'I/O 
+con il dispositivo (_read(), _write()) e l'interrupt handler inth.
+
+per esempio:
+    int _read(int disp, char *buf, int cont) {
+        descrittore[disp].contatore = cont;
+        descrittore[disp].puntatore = buf;
+
+        <attivazione dispositivo>;  //imposto bit di start=1
+
+        p(descrittore[disp].dato_disponibile);  //aspetto il semaforo
+
+        if(descrittore[disp].esito == <cod.errore>)
+            return -1;
+            
+        return (cont-descrittore[disp].contatore);
+    }
+
+    void inth() {
+        char b;
+
+        <legge il valore del registro di stato>;
+
+        if (<bit di errore> == 0) {
+            <ramo normale della funzione>
+        }
+        else {
+            <ramo eccezionale della funzione>
+        }
+
+        return //ritorno da interruzione
+    }
+
+    //ramo normale della funzione
+    {
+        < b = registro dati >;
+        *(descrittore[disp].puntatore)= b;
+        descrittore[disp].puntatore++;
+        descrittore[disp].contatore--;
+
+        if (descrittore[disp].contatore != 0)
+            <riattivazione dispositivo>;
+        else {
+            descrittore[disp].esito = <codice di terminazione corretta>;
+            <disattivazione dispositivo>;
+            v(descrittore[disp].dato_disponibile);  //riattivo il semaforo
+        }
+    }
+
+    //ramo eccezionale della funzione
+    { 
+        < routine di gestione errore >;
+
+        if (<errore non recuperabile>) {
+            descrittore[disp].esito = <codice errore>;
+            v(descrittore[disp].dato_disponibile);
+        }
+    }
+
+    NB: c'è anche un bell'esempio completo in slide 39

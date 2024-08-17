@@ -1,0 +1,44 @@
+Per consentire la modalità di servizio a divisione di tempo è necessario che il kernel gestisca un dispositivo temporizzatore (timer o clock).
+• Gestione del clock: i dispositivi clock generano interruzioni periodiche (clock ticks) a frequenze stabilite; la gestione software delle
+  interruzioni consente di ottenere alcuni servizi quali:
+    - aggiornamento della data
+    - gestione del quanto di tempo (sistemi time-sharing)
+    - valutazione dell’impegno della CPU di un processo
+    - gestione della system call ALARM
+    - gestione del time-out (watchdog timers)
+• Esempio di operazione sul clock: impostazione di un timeout -> delay(time);
+
+Il controllore del timer contiene, oltre ai registri di controllo e di stato, un REGISTRO CONTATORE nel quale la CPU trasferisce un valore intero che viene decrementato
+dal timer. Quando il registro contatore raggiunge il valore zero il controllore lancia un segnale di interruzione.
+Nel descrittore della periferica timer sono presenti:
+    - un array di N semafori (fine_attesa[N]) inizializzati a zero. Ciascun semaforo viene utilizzato per bloccare il corrispondente processo che chiama la delay.
+    - un array di interi (ritardo[N]) utilizzato per mantenere aggiornato il numero di quanti di tempo che devono ancora passare prima che un processo possa essere riattivato.
+
+DESCRITTORE DEL TIMER
+contiene:
+• indirizzo registro di controllo
+• indirizzo registro di stato
+• indirizzo registro contatore
+• Array di semafori privati: fine_attesa[N]
+• Array di interi: ritardo[N]
+
+ESEMPIO delay()
+void delay(int n) {
+    int proc=<indice del processo in esecuzione>;
+
+    descrittore.ritardo[proc]= n;
+    //sospensione del processo
+    descrittore.fine_attesa[proc].p();
+}
+
+//chiamato ad ogni tick del clock
+void inth(){
+    for(int i=0; i<N, i++) {
+        if (descrittore.ritardo[i] != 0){
+            descrittore.ritardo[i]--;
+            if(descrittore.ritardo[i] == 0)
+                //riattivo il processo
+                descrittore.fine_attesa[i].v();
+        }
+    }
+}
